@@ -4,11 +4,14 @@
 package practica_2;
 
 import org.junit.jupiter.api.Test;
+
+import com.pucmm.network.Main;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class AppTest {
     @Test void appHasAGreeting() {
-        App classUnderTest = new App();
+        Main classUnderTest = new Main();
         assertNotNull(classUnderTest.getGreeting(), "app should have a greeting");
     }
 }
