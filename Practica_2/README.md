@@ -28,9 +28,8 @@ Este proyecto en Java permite simular distintas topologias de red con concurrenc
 
 ## Uso rapido
 1. Clonar o copiar el proyecto.
-2. Importar en IDE o compilar con Maven/Gradle o javac:
+2. Abrir terminal en la carpeta clonada y correr:
    ```bash
-   javac -d bin src/.../*.java
-   java -cp bin com.pucmm.network.Main
+   ./gradlew run
 En `Main.java` ajustar sleeps si cambia la alntencia
 
