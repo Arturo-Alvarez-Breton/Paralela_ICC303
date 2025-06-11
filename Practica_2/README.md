@@ -2,23 +2,6 @@
 Este proyecto en Java permite simular distintas topologias de red con concurrencia. Cada topologia implementa una interfaz comun y usa nodos que procesan mensajes en paralelo.
 
 ## Estructura de paquetes
-├── Main.java
-├── manager
-│ └── NetworkManager.java
-├── core
-│ ├── NetworkTopology.java
-│ ├── Node.java
-│ └── Message.java
-└── topologia
-├── BusNetwork.java
-├── MeshNetwork.java
-├── FullyConnectedNetwork.java
-├── RingNetwork.java
-├── StarNetwork.java
-├── HypercubeNetwork.java
-├── TreeNetwork.java
-└── SwitchedNetwork.java
-
 - **core**: clases base:
   - `NetworkTopology`: interfaz con metodos `configureNetwork`, `sendMessage`, `runNetwork`, `shutdown`.
   - `Node`: cada nodo con su cola de mensajes, procesa solo si es destino
