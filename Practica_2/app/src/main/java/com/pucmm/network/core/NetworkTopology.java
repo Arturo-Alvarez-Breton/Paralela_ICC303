@@ -6,6 +6,7 @@ package com.pucmm.network.core;
 public interface NetworkTopology {
     /**
      * Configura la red con un n nodos
+     * 
      * @param numberOfNodes numero de nodos en la topologia
      */
     void configureNetwork(int numberOfNodes);

@@ -34,7 +34,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'practica_2.App'
+    mainClass = 'com.pucmm.network.Main'
 }
 
 tasks.named('test') {
