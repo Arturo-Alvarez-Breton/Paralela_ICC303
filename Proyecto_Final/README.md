@@ -1,4 +1,6 @@
-## **Este repo contendra el proyecto final de la materia Programacion Paralela y Concurrente ICC303. De momento el proyecto se encuentra en etatpa de desrrollo y se presenta un avance del mismo proyecto.**
+## **Proyecto Final ICC303 Programacion Paralela y Concurrente**
+
+Este repo contendra el proyecto final de la materia Programacion Paralela y Concurrente ICC303. De momento el proyecto se encuentra en etatpa de desrrollo y se presenta un avance del mismo proyecto.
 
 ### **Descripcion General:**
 El proyecto consiste en desarrollar un sistema para la gestion y control de semaforos y trafico en dos escenarios distintos utilizando tecnicas de programacion paralela y concurrente en `Java`. Se debe implementar una aplicacion con interfaz grafica de `JavaFX` que permita simular el comportamiento del trafico en un cruce de calles con 4 intersecciones y en una autopista de dos direcciones con multiples semaforos. La plicacion debe asegurar que no ocurran colosiones y que los vehiculos de emergencia siempre tengan prioridad.
