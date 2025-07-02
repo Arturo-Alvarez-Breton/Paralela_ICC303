@@ -1,15 +1,15 @@
 package app.model;
 
 import app.enums.DirectionEnum;
-import app.enums.vehicleTypeEnum;
+import app.enums.VehicleTypeEnum;
 
 public class Vehicle {
     private String id;
-    private vehicleTypeEnum type;
+    private VehicleTypeEnum type;
     private DirectionEnum direction;
     private boolean inTersection;
 
-    public Vehicle(String id, vehicleTypeEnum type, DirectionEnum direction) {
+    public Vehicle(String id, VehicleTypeEnum type, DirectionEnum direction) {
         this.id = id;
         this.type = type;
         this.direction = direction;
@@ -24,11 +24,11 @@ public class Vehicle {
         this.id = id;
     }
 
-    public vehicleTypeEnum getType() {
+    public VehicleTypeEnum getType() {
         return type;
     }
 
-    public void setType(vehicleTypeEnum type) {
+    public void setType(VehicleTypeEnum type) {
         this.type = type;
     }
 

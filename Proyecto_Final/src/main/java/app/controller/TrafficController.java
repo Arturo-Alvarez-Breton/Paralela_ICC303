@@ -22,7 +22,7 @@ public class TrafficController {
 
     public void startControl() {
         for(TrafficLight trafficLight : trafficLights) {
-            scheduler.scheduleAtFixedRate(light::changeLight, 0, 60, TimeUnit.SECONDS);
+//            scheduler.scheduleAtFixedRate(light::changeLight, 0, 60, TimeUnit.SECONDS);
         }
         scheduler.scheduleAtFixedRate(this::manageIntersections, 0, 1, TimeUnit.SECONDS);
     }

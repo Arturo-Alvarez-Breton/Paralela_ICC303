@@ -1,6 +1,6 @@
 package app.enums;
 
-public enum vehicleTypeEnum {
+public enum VehicleTypeEnum {
     NORMAL,
     EMERGENCY
 }
