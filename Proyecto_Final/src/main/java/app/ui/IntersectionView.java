@@ -15,11 +15,18 @@ public class IntersectionView extends Pane {
     private static final int LINE_WIDTH = 4;
     private static final int DASH_LENGTH = 15;
 
+    // Semaforos en las 4 esquinas
+    private TrafficLightView northLight;
+    private TrafficLightView eastLight;
+    private TrafficLightView southLight;
+    private TrafficLightView westLight;
+
     public IntersectionView() {
         setPrefSize(WIDTH, HEIGHT);
         drawBackground();
         drawRoads();
         drawCenterLines();
+        drawTrafficLights();
     }
 
     private void drawBackground() {
@@ -71,4 +78,24 @@ public class IntersectionView extends Pane {
         }
     }
 
+    private void drawTrafficLights() {
+        double offset = 20;
+        double centerX = WIDTH / 2;
+        double centerY = HEIGHT / 2;
+        double halfRoad = ROAD_WIDTH / 2;
+
+        // Semaforos
+        northLight = new TrafficLightView(centerX - halfRoad + offset, centerY - halfRoad - offset, false);
+        southLight = new TrafficLightView(centerX + halfRoad - offset, centerY + halfRoad + offset, false);
+        eastLight = new TrafficLightView(centerX + halfRoad + offset, centerY - halfRoad + offset, false);
+        westLight = new TrafficLightView(centerX - halfRoad - offset, centerY + halfRoad - offset, false);
+
+        getChildren().addAll(northLight, southLight, eastLight, westLight);
+    }
+
+    // Métodos para acceder y actualizar los semáforos
+    public TrafficLightView getNorthLight() { return northLight; }
+    public TrafficLightView getSouthLight() { return southLight; }
+    public TrafficLightView getEastLight() { return eastLight; }
+    public TrafficLightView getWestLight() { return westLight; }
 }
