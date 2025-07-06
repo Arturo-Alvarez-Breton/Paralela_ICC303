@@ -20,6 +20,15 @@ public class IntersectionView extends BorderPane {
     private static final int HEIGHT = LaunchView.HEIGHT;
     private static final int ROAD_WIDTH = HEIGHT / 4;
 
+    private static final Color FILL_COLOR_NORTH = Color.RED;
+    private static final Color FILL_COLOR_SOUTH = Color.YELLOW;
+    private static final Color FILL_COLOR_EAST = Color.BLUE;
+    private static final Color FILL_COLOR_WEST = Color.PURPLE;
+    private static final Color STROKE_COLOR_NORTH = Color.DARKRED;
+    private static final Color STROKE_COLOR_SOUTH = Color.YELLOW;
+    private static final Color STROKE_COLOR_EAST = Color.DARKBLUE;
+    private static final Color STROKE_COLOR_WEST = Color.DARKMAGENTA;
+
     private Pane intersectionPane;
 
     public IntersectionView() {
@@ -120,7 +129,8 @@ public class IntersectionView extends BorderPane {
      * Crea un vehículo en el borde especificado y lo anima hacia el centro.
      */
     private void addVehicleFrom(String direction) {
-        Color vehicleColor = Color.GRAY;
+        Color fillColor = Color.GRAY;
+        Color strokeColor = Color.BLACK;
         double centerX = WIDTH / 2.0;
         double centerY = HEIGHT / 2.0;
         double quarterRoad = ROAD_WIDTH / 4.0;
@@ -129,31 +139,39 @@ public class IntersectionView extends BorderPane {
 
         switch (direction) {
             case "north":
+                fillColor = FILL_COLOR_NORTH;
+                strokeColor = STROKE_COLOR_NORTH;
                 endX = startX = centerX - quarterRoad;
                 startY = 0;
-                endY = centerY;
+                endY = HEIGHT;
                 break;
             case "south":
+                fillColor = FILL_COLOR_SOUTH;
+                strokeColor = STROKE_COLOR_SOUTH;
                 endX = startX = centerX + quarterRoad;
                 startY = HEIGHT;
-                endY = centerY;
+                endY = -HEIGHT;
                 break;
             case "east":
+                fillColor = FILL_COLOR_EAST;
+                strokeColor = STROKE_COLOR_EAST;
                 startY = endY = centerY - quarterRoad;
                 startX = WIDTH;
-                endX = centerX;
+                endX = -WIDTH;
                 break;
             case "west":
+                fillColor = FILL_COLOR_WEST;
+                strokeColor = STROKE_COLOR_WEST;
                 startY = endY = centerY + quarterRoad;
                 startX = 0;
-                endX = centerX;
+                endX = WIDTH;
                 break;
             default:
                 break;
         }
 
         // Crear y añadir la vista del vehículo
-        VehicleView vehicle = new VehicleView(startX, startY, Color.BLUE);
+        VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor);
         intersectionPane.getChildren().add(vehicle);
 
         // Definir trayectoria y transición
