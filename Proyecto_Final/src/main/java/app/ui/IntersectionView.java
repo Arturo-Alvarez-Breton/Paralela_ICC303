@@ -27,6 +27,7 @@ public class IntersectionView extends Pane {
         drawBackground();
         drawRoads();
         drawCenterLines();
+        drawStopSigns();
         //drawTrafficLights();
     }
 
@@ -52,12 +53,11 @@ public class IntersectionView extends Pane {
 
         // Líneas amarillas horizontales
         for(int x = 0; x < WIDTH; x += 2 * DASH_LENGTH) {
-            int startX = x;
             int endX = x + DASH_LENGTH;
 
             // Evitar zona central
-            if (!(endX > centerX - ROAD_WIDTH / 2 && startX < centerX + ROAD_WIDTH / 2)) {
-                Line dash = new Line(startX, centerY, endX, centerY);
+            if (!(endX > centerX - ROAD_WIDTH / 2 && x < centerX + ROAD_WIDTH / 2)) {
+                Line dash = new Line(x, centerY, endX, centerY);
                 dash.setStroke(Color.YELLOW);
                 dash.setStrokeWidth(LINE_WIDTH);
                 getChildren().add(dash);
@@ -77,6 +77,20 @@ public class IntersectionView extends Pane {
                 getChildren().add(dash);
             }
         }
+    }
+
+    private void drawStopSigns() {
+        double offset = 25;
+        double centerX = WIDTH / 2;
+        double centerY = HEIGHT / 2;
+        double halfRoad = ROAD_WIDTH / 2;
+
+        StopSignView northStop = new StopSignView(centerX - halfRoad + offset, centerY - halfRoad - offset);
+        StopSignView southStop = new StopSignView(centerX + halfRoad - offset, centerY + halfRoad + offset);
+        StopSignView eastStop = new StopSignView(centerX + halfRoad + offset, centerY - halfRoad + offset);
+        StopSignView westStop = new StopSignView(centerX - halfRoad - offset, centerY + halfRoad - offset);
+
+        getChildren().addAll(northStop, southStop, eastStop, westStop);
     }
 
     private void drawTrafficLights() {
