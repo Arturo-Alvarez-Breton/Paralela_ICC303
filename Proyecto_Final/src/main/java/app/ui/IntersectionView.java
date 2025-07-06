@@ -5,15 +5,16 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
 
+
 public class IntersectionView extends Pane {
     // Alto y ancho de la pantalla
-    private static final int WIDTH = 600;
-    private static final int HEIGHT = 600;
+    private static final int WIDTH = LaunchView.WIDTH;
+    private static final int HEIGHT = LaunchView.HEIGHT;
 
     // Ancho de las calles y líneas
-    private static final int ROAD_WIDTH = 150;
-    private static final int LINE_WIDTH = 4;
-    private static final int DASH_LENGTH = 15;
+    private static final int ROAD_WIDTH = HEIGHT/4;
+    private static final int LINE_WIDTH = (int) (HEIGHT*0.008);
+    private static final int DASH_LENGTH = (int) (HEIGHT*0.020);
 
     // Semaforos en las 4 esquinas
     private TrafficLightView northLight;
@@ -26,22 +27,22 @@ public class IntersectionView extends Pane {
         drawBackground();
         drawRoads();
         drawCenterLines();
-        drawTrafficLights();
+        //drawTrafficLights();
     }
 
     private void drawBackground() {
         Rectangle background = new Rectangle(WIDTH, HEIGHT);
-        background.setFill(Color.SADDLEBROWN);
+        background.setFill(Color.GREEN);
         getChildren().add(background);
     }
 
     private void drawRoads() {
         Rectangle horizontalRoad = new Rectangle(0, ((double) HEIGHT / 2) - ((double) ROAD_WIDTH / 2), WIDTH, ROAD_WIDTH);
-        horizontalRoad.setFill(Color.LIGHTGRAY);
+        horizontalRoad.setFill(Color.BLACK);
         getChildren().add(horizontalRoad);
 
         Rectangle verticalRoad = new Rectangle((double) WIDTH / 2 - (double) ROAD_WIDTH / 2, 0, ROAD_WIDTH, HEIGHT);
-        verticalRoad.setFill(Color.LIGHTGRAY);
+        verticalRoad.setFill(Color.BLACK);
         getChildren().add(verticalRoad);
     }
 
