@@ -30,7 +30,7 @@ public class TrafficController {
     private void manageIntersections() {
         for (Intersection intersection : intersections) {
             Vehicle nextVehicle = intersection.getNextVehicle();
-            if (nextVehicle != null && nextVehicle.isInTersection()) {
+            if (nextVehicle != null && nextVehicle.isInIntersection()) {
                 // Process the vehicle in the intersection
             }
         }

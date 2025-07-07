@@ -7,13 +7,13 @@ public class Vehicle {
     private String id;
     private VehicleTypeEnum type;
     private DirectionEnum direction;
-    private boolean inTersection;
+    private boolean inIntersection;
 
     public Vehicle(String id, VehicleTypeEnum type, DirectionEnum direction) {
         this.id = id;
         this.type = type;
         this.direction = direction;
-        this.inTersection = false; // Default value
+        this.inIntersection = false; // Default value
     }
 
     public String getId() {
@@ -40,12 +40,12 @@ public class Vehicle {
         this.direction = direction;
     }
 
-    public boolean isInTersection() {
-        return inTersection;
+    public boolean isInIntersection() {
+        return inIntersection;
     }
 
     public void setInTersection(boolean inTersection) {
-        this.inTersection = inTersection;
+        this.inIntersection = inTersection;
     }
 }
 
