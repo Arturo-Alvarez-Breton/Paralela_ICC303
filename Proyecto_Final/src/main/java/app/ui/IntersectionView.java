@@ -143,7 +143,7 @@ public class IntersectionView extends BorderPane {
                 startX = CENTER - QUARTER_ROAD_WIDTH;
                 startY = 0;
                 endX = CENTER - QUARTER_ROAD_WIDTH;
-                endY = SIZE;
+                endY = getCenterCarPosition(turn, 1);
                 break;
             case "sur":
                 fillColor = FILL_COLOR_SOUTH;
@@ -151,34 +151,34 @@ public class IntersectionView extends BorderPane {
                 startX = CENTER + QUARTER_ROAD_WIDTH;
                 startY = SIZE;
                 endX = CENTER + QUARTER_ROAD_WIDTH;
-                endY = 0;
+                endY = getCenterCarPosition(turn, -1);
                 break;
             case "este":
                 fillColor = FILL_COLOR_EAST;
                 strokeColor = STROKE_COLOR_EAST;
                 startX = SIZE;
                 startY = CENTER - QUARTER_ROAD_WIDTH;
-                endX = 0;
-                endY = CENTER - QUARTER_ROAD_WIDTH;
+                endX = getCenterCarPosition(turn, -1);
+                endY = CENTER - QUARTER_ROAD_WIDTH;;
                 break;
             case "oeste":
                 fillColor = FILL_COLOR_WEST;
                 strokeColor = STROKE_COLOR_WEST;
                 startX = 0;
                 startY = CENTER + QUARTER_ROAD_WIDTH;
-                endX = SIZE;
-                endY = CENTER + QUARTER_ROAD_WIDTH;
+                endX = getCenterCarPosition(turn, 1);
+                endY = CENTER + QUARTER_ROAD_WIDTH;;
                 break;
             default:
                 fillColor = Color.GRAY;
                 strokeColor = Color.BLACK;
         }
 
-        // 1. Crear vehículo lógico
+        // Crear vehículo
         Vehicle logicalVehicle = new Vehicle("V" + System.nanoTime(), VehicleTypeEnum.NORMAL, turn);
         logicalIntersection.addVehicle(logicalVehicle); // Suponiendo que tengas este metodo
 
-        // 2. Crear vista visual y animación
+        // Crear vista visual y animacion
         VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor);
         intersectionPane.getChildren().add(vehicle);
 
@@ -193,7 +193,6 @@ public class IntersectionView extends BorderPane {
     }
 
     private int getCenterCarPosition(DirectionEnum turn, int offsetSign) {
-
         int maxPos = (int) CENTER;
         switch (turn) {
             case LEFT -> maxPos = (int) CENTER + QUARTER_ROAD_WIDTH * offsetSign;
@@ -202,6 +201,11 @@ public class IntersectionView extends BorderPane {
         }
 
         return maxPos;
+    }
+
+    private Color getStrokeColorByDirection(DirectionEnum direction) {
+        // TODO: Asignar color de stroke en base a la direccion a la que se dirige el carro
+        return null;
     }
 
     private GridPane createControlGrid() {
