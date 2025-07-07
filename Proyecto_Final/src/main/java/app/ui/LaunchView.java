@@ -15,9 +15,10 @@ public class LaunchView {
     public Scene createLaunchScene(Stage primaryStage) {
         // Título
         Label title = new Label("Simulación de Tráfico");
+        // se aplican los estilos del titulo
         title.getStyleClass().add("title");
 
-        // Botón Iniciar
+        // Botón Iniciar y asignacion de estilos al mismo
         Button btnStart = new Button("Iniciar");
         btnStart.getStyleClass().add("start-btn");
         btnStart.setOnAction(e -> {
