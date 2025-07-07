@@ -1,15 +1,63 @@
-## **Proyecto Final ICC303 Programacion Paralela y Concurrente**
+# **Proyecto Final ICC303 Programacion Paralela y Concurrente**
 
-Este repo contendra el proyecto final de la materia Programacion Paralela y Concurrente ICC303. De momento el proyecto se encuentra en etatpa de desrrollo y se presenta un avance del mismo proyecto.
+Este repo contendra el proyecto final de la materia Programacion Paralela y Concurrente ICC303. 
+De momento el proyecto se encuentra en etatpa de desrrollo y se presenta un avance del mismo proyecto.
 
-### **Descripcion General:**
-El proyecto consiste en desarrollar un sistema para la gestion y control de semaforos y trafico en dos escenarios distintos utilizando tecnicas de programacion paralela y concurrente en `Java`. Se debe implementar una aplicacion con interfaz grafica de `JavaFX` que permita simular el comportamiento del trafico en un cruce de calles con 4 intersecciones y en una autopista de dos direcciones con multiples semaforos. La plicacion debe asegurar que no ocurran colosiones y que los vehiculos de emergencia siempre tengan prioridad.
+## **Descripcion General:**
+Este proyecto desarrolla un sistema de gestió y control de tráfico en un cruce de cuatro calles con señales de
+"Pare", usando técnicas de programación paralela y concurrente en Java, con interfaz gráfica JavaFX. 
+Se deben evitar colisiones y garantizar que los vehiculos de emergencia tengan prioridad.
+
+## **Actores y entidades**
+- **Vehicle (NORMAL / EMERGENCY):** Vehículo que llega al cruce con una dirección determinada (STRAIGHT, RIGHT, LEFT, U-TURN)
+- **Intersection:** Punto de cruce con una cola concurrente de vehiculos segun las reglas
+- **TrafficController:** Componente concurrente que despacha vehiculos segun las reglas
+- **TraficLight:** Semafora para futura extencion (No es parte de esta entrega / avance)
+
+## **Casos de Uso Clave**
+1) **LLegaada de un Vehiculo** 
+   - se crea un objeto Vehicle con atributos
+     - `type`: NORMAL o EMERGENCY
+     - `direction`: RIGHT, LEFT, STRAIGHT, U-TURN
+     - `arrivalTime`: timestamp del momento en el que fue colocado
+   - se invoca `Intersection.addVehicle(vehicle)` entonces se coloca en la `PriorityblockingQueue`
+
+
+2) **Despacho de Vehiculo**
+   - Ejecutado periodicamente por `TrafficController.manageIntersections()`
+   - Se obtiene el proximo vehiculo `(poll())`segun comparador:
+     1) EMERGENCY > NORMAL
+     2) Si son del mismo tipo entonces menor `arrivalTime` (FIFO)
+   - Antes de avanzar se confirma que no hay conflicto con otros vehiculos en la interseccion
+
+
+3) **Confiracion de Cruce Libre**
+   -  Se mantiene un mapa de carriles ocupados `Map<DirectionEnum, Boolean>`
+   - Definir matriz de conflictos entre direcciones: un vehiculo solo avanza si:
+     - Su carril de entrada y salida estan libres
+     - No existe otro vehiculo en cola con mayor prioridad de giro que generaria colision
+   - Al despachar, se marcan los carriles como ocupados, se liberan al completar la animacion.
+
+## **Regals de Prioridad de Giro**
+
+Lista los posibles movimientos simultaneos de los demas carros
+
+| Direccion del vehiculo con prioirdad | Carro Opuesto           | Carro a la Derecha    | Carro a la Izquierda |
+|--------------------------------------|-------------------------|-----------------------|----------------------|
+| STRAIGHT                             | STRAIGHT, RIGHT         | X                     | RIGHT, U-TURN        |
+| RIGHT                                | STRAIGHT, RIGHT, U-TURN | STRAIGHT, RIGHT, LEFT | RIGHT, U-TURN        |
+| LEFT                                 | X                       | RIGHT, U-TURN         | RIGHT                |
+| U-TURN                               | RIGHT, U-TURN           | STRAIGHT, RIGHT       | X                    |
+Los vehiculos de emergencia siempre sobrepasan esta tabla
+
+
 
 ### **Escenarios del Proyecto**
 - `Escenario 1:` Cruce de calles con 4 intersecciones
   - Cada interseccion tiene un "pare"
   - Los vehiculos deben cruzar en el orden que llegan a la interseccion
-  - Los vehiculos de emergencia tienen prioridad sobre todos los demas vehiculos. Se debe considerar que para que un vehiculo de emergencia avance todos los que estan delante deben avanzar primero
+  - Los vehiculos de emergencia tienen prioridad sobre todos los demas vehiculos. Se debe considerar 
+que para que un vehiculo de emergencia avance todos los que estan delante deben avanzar primero
   - Evitar colisiones entre vehiculos
   - Interfaz grafica con `JavaFX`
 
