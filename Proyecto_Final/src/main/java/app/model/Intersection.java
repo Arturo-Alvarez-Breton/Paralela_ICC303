@@ -34,4 +34,8 @@ public class Intersection {
     public Vehicle getNextVehicle() {
         return vehicleQueue.poll();
     }
+
+    public void addVehicle(Vehicle logicalVehicle) {
+        vehicleQueue.offer(logicalVehicle);
+    }
 }

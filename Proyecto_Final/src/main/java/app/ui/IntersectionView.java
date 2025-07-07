@@ -1,14 +1,13 @@
 package app.ui;
 
 import app.enums.DirectionEnum;
-
+import app.model.Intersection;
 import app.enums.VehicleTypeEnum;
+
+import app.model.Vehicle;
 import javafx.animation.PathTransition;
-import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -18,21 +17,19 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.*;
 
 /**
  * Panel principal de la intersección con controles para agregar vehículos
  */
 public class IntersectionView extends BorderPane {
-    private static final int WIDTH = LaunchView.WIDTH;
-    private static final int HEIGHT = LaunchView.HEIGHT;
-    private static final int ROAD_WIDTH = HEIGHT / 4;
-    private static final double LINE_WIDTH = HEIGHT * 0.008;
-    private static final double LINE_LENGTH = HEIGHT * 0.08;
+    private static final int SIZE = LaunchView.HEIGHT;
+    private static final int ROAD_WIDTH = SIZE / 4;
+    private static final int HALF_ROAD_WIDTH = ROAD_WIDTH / 2;
+    private static final int QUARTER_ROAD_WIDTH = HALF_ROAD_WIDTH / 2;
+    private static final double LINE_WIDTH = SIZE * 0.008;
+    private static final double LINE_LENGTH = SIZE * 0.08;
 
-    private static final double CENTER_X = WIDTH / 2.0;
-    private static final double CENTER_Y = HEIGHT / 2.0;
+    private static final double CENTER = SIZE / 2.0;
     private static final double CAR_OFFSET = ROAD_WIDTH / 2.0;
     private static final double STOP_SIGN_OFFSET = 25;
 
@@ -45,9 +42,13 @@ public class IntersectionView extends BorderPane {
     private static final Color STROKE_COLOR_EAST = Color.DARKBLUE;
     private static final Color STROKE_COLOR_WEST = Color.DARKMAGENTA;
 
-    private Pane intersectionPane;
+    private final Pane intersectionPane;
+
+    private final Intersection logicalIntersection;
 
     public IntersectionView() {
+        this.logicalIntersection = new Intersection("case-1", true);
+
         // ya no fijamos prefSize al BorderPane, dejamos que el contenedor lo escale
         intersectionPane = new Pane();
         drawBackground();
@@ -69,17 +70,17 @@ public class IntersectionView extends BorderPane {
     }
 
     private void drawBackground() {
-        Rectangle background = new Rectangle(WIDTH, HEIGHT);
+        Rectangle background = new Rectangle(SIZE, SIZE);
         background.setFill(Color.GREEN);
         intersectionPane.getChildren().add(background);
     }
 
     private void drawRoads() {
-        Rectangle horizontalRoad = new Rectangle(0, (HEIGHT / 2.0) - (ROAD_WIDTH / 2.0), WIDTH, ROAD_WIDTH);
+        Rectangle horizontalRoad = new Rectangle(0, CENTER - HALF_ROAD_WIDTH, SIZE, ROAD_WIDTH);
         horizontalRoad.setFill(Color.BLACK);
         intersectionPane.getChildren().add(horizontalRoad);
 
-        Rectangle verticalRoad = new Rectangle((WIDTH / 2.0) - (ROAD_WIDTH / 2.0), 0, ROAD_WIDTH, HEIGHT);
+        Rectangle verticalRoad = new Rectangle((CENTER) - (HALF_ROAD_WIDTH), 0, ROAD_WIDTH, SIZE);
         verticalRoad.setFill(Color.BLACK);
         intersectionPane.getChildren().add(verticalRoad);
     }
@@ -87,10 +88,10 @@ public class IntersectionView extends BorderPane {
     private void drawCenterLines() {
 
         // Líneas amarillas horizontales
-        for (int x = 0; x < WIDTH; x += 2 * (int) LINE_LENGTH) {
+        for (int x = 0; x < SIZE; x += 2 * (int) LINE_LENGTH) {
             int endX = x + (int) LINE_LENGTH;
-            if (!(endX > CENTER_X - ROAD_WIDTH / 2 && x < CENTER_X + ROAD_WIDTH / 2)) {
-                Line dash = new Line(x, CENTER_Y, endX, CENTER_Y);
+            if (!(endX > CENTER - HALF_ROAD_WIDTH && x < CENTER + HALF_ROAD_WIDTH)) {
+                Line dash = new Line(x, CENTER, endX, CENTER);
                 dash.setStroke(Color.YELLOW);
                 dash.setStrokeWidth((int) LINE_WIDTH);
                 intersectionPane.getChildren().add(dash);
@@ -98,10 +99,10 @@ public class IntersectionView extends BorderPane {
         }
 
         // Líneas amarillas verticales
-        for (int y = 0; y < HEIGHT; y += 2 * LINE_LENGTH) {
+        for (int y = 0; y < SIZE; y += 2 * (int) LINE_LENGTH) {
             int endY = y + (int) LINE_LENGTH;
-            if (!(endY > CENTER_Y - ROAD_WIDTH / 2 && y < CENTER_Y + ROAD_WIDTH / 2)) {
-                Line dash = new Line(CENTER_X, y, CENTER_X, endY);
+            if (!(endY > CENTER - HALF_ROAD_WIDTH && y < CENTER + HALF_ROAD_WIDTH)) {
+                Line dash = new Line(CENTER, y, CENTER, endY);
                 dash.setStroke(Color.YELLOW);
                 dash.setStrokeWidth(LINE_WIDTH);
                 intersectionPane.getChildren().add(dash);
@@ -110,39 +111,20 @@ public class IntersectionView extends BorderPane {
     }
 
     private void drawStopSigns() {
-        StopSignView northStop = new StopSignView(CENTER_X - CAR_OFFSET + STOP_SIGN_OFFSET,
-                                                    CENTER_Y - CAR_OFFSET - STOP_SIGN_OFFSET);
+        StopSignView northStop = new StopSignView(CENTER - CAR_OFFSET + STOP_SIGN_OFFSET,
+                                                    CENTER - CAR_OFFSET - STOP_SIGN_OFFSET);
 
-        StopSignView southStop = new StopSignView(CENTER_X + CAR_OFFSET - STOP_SIGN_OFFSET,
-                                                    CENTER_Y + CAR_OFFSET + STOP_SIGN_OFFSET);
+        StopSignView southStop = new StopSignView(CENTER + CAR_OFFSET - STOP_SIGN_OFFSET,
+                                                    CENTER + CAR_OFFSET + STOP_SIGN_OFFSET);
 
-        StopSignView eastStop = new StopSignView(CENTER_X + CAR_OFFSET + STOP_SIGN_OFFSET,
-                                                    CENTER_Y - CAR_OFFSET + STOP_SIGN_OFFSET);
+        StopSignView eastStop = new StopSignView(CENTER + CAR_OFFSET + STOP_SIGN_OFFSET,
+                                                    CENTER - CAR_OFFSET + STOP_SIGN_OFFSET);
 
-        StopSignView westStop = new StopSignView(CENTER_X - CAR_OFFSET - STOP_SIGN_OFFSET,
-                                                    CENTER_Y + CAR_OFFSET - STOP_SIGN_OFFSET);
+        StopSignView westStop = new StopSignView(CENTER - CAR_OFFSET - STOP_SIGN_OFFSET,
+                                                    CENTER + CAR_OFFSET - STOP_SIGN_OFFSET);
 
         intersectionPane.getChildren().addAll(northStop, southStop, eastStop, westStop);
     }
-
-//    private HBox createControlPanel() {
-//        Button btnNorth = new Button("Agregar Norte");
-//        btnNorth.setOnAction(e -> addVehicleFrom("north"));
-//
-//        Button btnSouth = new Button("Agregar Sur");
-//        btnSouth.setOnAction(e -> addVehicleFrom("south"));
-//
-//        Button btnEast = new Button("Agregar Este");
-//        btnEast.setOnAction(e -> addVehicleFrom("east"));
-//
-//        Button btnWest = new Button("Agregar Oeste");
-//        btnWest.setOnAction(e -> addVehicleFrom("west"));
-//
-//        HBox controls = new HBox(20, btnNorth, btnSouth, btnEast, btnWest);
-//        controls.setAlignment(Pos.CENTER);
-//        controls.setStyle("-fx-padding: 10; -fx-background-color: #dddddd;");
-//        return controls;
-//    }
 
     /**
      * Crea un vehículo en el borde especificado y lo anima hacia el centro.
@@ -151,56 +133,75 @@ public class IntersectionView extends BorderPane {
         // por ahora mantenemos tu lógica de animación lineal
         // pero podrias guardarte el 'turn' en Vehicle y luego procesarlo.
         Color fillColor, strokeColor;
-        double quarterRoad = ROAD_WIDTH / 4.0;
-        double startX = CENTER_X, startY = CENTER_Y;
-        double endX = CENTER_X, endY = CENTER_Y;
+        double startX = CENTER, startY = CENTER;
+        double endX = CENTER, endY = CENTER;
 
         switch (entryPoint) {
             case "norte":
                 fillColor = FILL_COLOR_NORTH;
                 strokeColor = STROKE_COLOR_NORTH;
-                startX = CENTER_X - quarterRoad;
+                startX = CENTER - QUARTER_ROAD_WIDTH;
                 startY = 0;
-                endX = CENTER_X - quarterRoad;
-                endY = HEIGHT;
+                endX = CENTER - QUARTER_ROAD_WIDTH;
+                endY = SIZE;
                 break;
             case "sur":
                 fillColor = FILL_COLOR_SOUTH;
                 strokeColor = STROKE_COLOR_SOUTH;
-                startX = CENTER_X + quarterRoad;
-                startY = HEIGHT;
-                endX = CENTER_X + quarterRoad;
+                startX = CENTER + QUARTER_ROAD_WIDTH;
+                startY = SIZE;
+                endX = CENTER + QUARTER_ROAD_WIDTH;
                 endY = 0;
                 break;
             case "este":
                 fillColor = FILL_COLOR_EAST;
                 strokeColor = STROKE_COLOR_EAST;
-                startX = WIDTH;
-                startY = CENTER_Y - quarterRoad;
+                startX = SIZE;
+                startY = CENTER - QUARTER_ROAD_WIDTH;
                 endX = 0;
-                endY = CENTER_Y - quarterRoad;
+                endY = CENTER - QUARTER_ROAD_WIDTH;
                 break;
             case "oeste":
                 fillColor = FILL_COLOR_WEST;
                 strokeColor = STROKE_COLOR_WEST;
                 startX = 0;
-                startY = CENTER_Y + quarterRoad;
-                endX = WIDTH;
-                endY = CENTER_Y + quarterRoad;
+                startY = CENTER + QUARTER_ROAD_WIDTH;
+                endX = SIZE;
+                endY = CENTER + QUARTER_ROAD_WIDTH;
                 break;
             default:
                 fillColor = Color.GRAY;
                 strokeColor = Color.BLACK;
         }
 
+        // 1. Crear vehículo lógico
+        Vehicle logicalVehicle = new Vehicle("V" + System.nanoTime(), VehicleTypeEnum.NORMAL, turn);
+        logicalIntersection.addVehicle(logicalVehicle); // Suponiendo que tengas este metodo
+
+        // 2. Crear vista visual y animación
         VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor);
         intersectionPane.getChildren().add(vehicle);
 
         Line path = new Line(startX, startY, endX, endY);
         PathTransition transition = new PathTransition(Duration.seconds(3), path, vehicle);
         transition.setCycleCount(1);
-        transition.setOnFinished(e -> intersectionPane.getChildren().remove(vehicle));
+        transition.setOnFinished(e -> {
+            logicalVehicle.setInTersection(true); // Se marca como dentro de la intersección
+            intersectionPane.getChildren().remove(vehicle); // Quitarlo visualmente
+        });
         transition.play();
+    }
+
+    private int getCenterCarPosition(DirectionEnum turn, int offsetSign) {
+
+        int maxPos = (int) CENTER;
+        switch (turn) {
+            case LEFT -> maxPos = (int) CENTER + QUARTER_ROAD_WIDTH * offsetSign;
+            case RIGHT -> maxPos = (int) CENTER - QUARTER_ROAD_WIDTH * offsetSign;
+            case U_TURN -> maxPos = (int) CENTER - (int) LINE_WIDTH * offsetSign;
+        }
+
+        return maxPos;
     }
 
     private GridPane createControlGrid() {
@@ -227,7 +228,7 @@ public class IntersectionView extends BorderPane {
         for (int r = 0; r < actionNames.length; r++) {
             for (int c = 0; c < cardinals.length; c++) {
                 String dir = cardinals[c].toLowerCase();
-                String action = actionNames[r];
+                 String action = actionNames[r];
                 Button btn = new Button(action.replace('_','‑'));
                 btn.setMaxWidth(Double.MAX_VALUE); // para que estiren dentro de su celda, pero no más allá
                 btn.setStyle(
