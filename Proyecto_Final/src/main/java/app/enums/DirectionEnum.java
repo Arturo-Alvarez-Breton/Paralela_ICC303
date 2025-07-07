@@ -1,7 +1,7 @@
 package app.enums;
 
 public enum DirectionEnum {
-    RIHGT,
+    RIGHT,
     STRAIGHT,
     LEFT,
     U_TURN

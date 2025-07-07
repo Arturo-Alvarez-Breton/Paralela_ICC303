@@ -19,6 +19,13 @@ public class IntersectionView extends BorderPane {
     private static final int WIDTH = LaunchView.WIDTH;
     private static final int HEIGHT = LaunchView.HEIGHT;
     private static final int ROAD_WIDTH = HEIGHT / 4;
+    private static final double LINE_WIDTH = HEIGHT * 0.008;
+    private static final double LINE_LENGTH = HEIGHT * 0.08;
+
+    private static final double CENTER_X = WIDTH / 2.0;
+    private static final double CENTER_Y = HEIGHT / 2.0;
+    private static final double CAR_OFFSET = ROAD_WIDTH / 2.0;
+    private static final double STOP_SIGN_OFFSET = 25;
 
     private static final Color FILL_COLOR_NORTH = Color.RED;
     private static final Color FILL_COLOR_SOUTH = Color.YELLOW;
@@ -64,29 +71,25 @@ public class IntersectionView extends BorderPane {
     }
 
     private void drawCenterLines() {
-        int centerX = WIDTH / 2;
-        int centerY = HEIGHT / 2;
-        int lineWidth = (int) (HEIGHT * 0.008);
-        int dashLength = (int) (HEIGHT * 0.020);
 
         // Líneas amarillas horizontales
-        for (int x = 0; x < WIDTH; x += 2 * dashLength) {
-            int endX = x + dashLength;
-            if (!(endX > centerX - ROAD_WIDTH / 2 && x < centerX + ROAD_WIDTH / 2)) {
-                Line dash = new Line(x, centerY, endX, centerY);
+        for (int x = 0; x < WIDTH; x += 2 * (int) LINE_LENGTH) {
+            int endX = x + (int) LINE_LENGTH;
+            if (!(endX > CENTER_X - ROAD_WIDTH / 2 && x < CENTER_X + ROAD_WIDTH / 2)) {
+                Line dash = new Line(x, CENTER_Y, endX, CENTER_Y);
                 dash.setStroke(Color.YELLOW);
-                dash.setStrokeWidth(lineWidth);
+                dash.setStrokeWidth((int) LINE_WIDTH);
                 intersectionPane.getChildren().add(dash);
             }
         }
 
         // Líneas amarillas verticales
-        for (int y = 0; y < HEIGHT; y += 2 * dashLength) {
-            int endY = y + dashLength;
-            if (!(endY > centerY - ROAD_WIDTH / 2 && y < centerY + ROAD_WIDTH / 2)) {
-                Line dash = new Line(centerX, y, centerX, endY);
+        for (int y = 0; y < HEIGHT; y += 2 * LINE_LENGTH) {
+            int endY = y + (int) LINE_LENGTH;
+            if (!(endY > CENTER_Y - ROAD_WIDTH / 2 && y < CENTER_Y + ROAD_WIDTH / 2)) {
+                Line dash = new Line(CENTER_X, y, CENTER_X, endY);
                 dash.setStroke(Color.YELLOW);
-                dash.setStrokeWidth(lineWidth);
+                dash.setStrokeWidth(LINE_WIDTH);
                 intersectionPane.getChildren().add(dash);
             }
         }
@@ -94,14 +97,18 @@ public class IntersectionView extends BorderPane {
 
     private void drawStopSigns() {
         double offset = 25;
-        double centerX = WIDTH / 2.0;
-        double centerY = HEIGHT / 2.0;
-        double halfRoad = ROAD_WIDTH / 2.0;
 
-        StopSignView northStop = new StopSignView(centerX - halfRoad + offset, centerY - halfRoad - offset);
-        StopSignView southStop = new StopSignView(centerX + halfRoad - offset, centerY + halfRoad + offset);
-        StopSignView eastStop = new StopSignView(centerX + halfRoad + offset, centerY - halfRoad + offset);
-        StopSignView westStop = new StopSignView(centerX - halfRoad - offset, centerY + halfRoad - offset);
+        StopSignView northStop = new StopSignView(CENTER_X - CAR_OFFSET + STOP_SIGN_OFFSET,
+                                                    CENTER_Y - CAR_OFFSET - STOP_SIGN_OFFSET);
+
+        StopSignView southStop = new StopSignView(CENTER_X + CAR_OFFSET - STOP_SIGN_OFFSET,
+                                                    CENTER_Y + CAR_OFFSET + STOP_SIGN_OFFSET);
+
+        StopSignView eastStop = new StopSignView(CENTER_X + CAR_OFFSET + STOP_SIGN_OFFSET,
+                                                    CENTER_Y - CAR_OFFSET + STOP_SIGN_OFFSET);
+
+        StopSignView westStop = new StopSignView(CENTER_X - CAR_OFFSET - STOP_SIGN_OFFSET,
+                                                    CENTER_Y + CAR_OFFSET - STOP_SIGN_OFFSET);
 
         intersectionPane.getChildren().addAll(northStop, southStop, eastStop, westStop);
     }
@@ -131,38 +138,36 @@ public class IntersectionView extends BorderPane {
     private void addVehicleFrom(String direction) {
         Color fillColor = Color.GRAY;
         Color strokeColor = Color.BLACK;
-        double centerX = WIDTH / 2.0;
-        double centerY = HEIGHT / 2.0;
         double quarterRoad = ROAD_WIDTH / 4.0;
-        double startX = centerX, startY = centerY;
-        double endX = centerX, endY = centerY;
+        double startX = CENTER_X, startY = CENTER_Y;
+        double endX = CENTER_X, endY = CENTER_Y;
 
         switch (direction) {
             case "north":
                 fillColor = FILL_COLOR_NORTH;
                 strokeColor = STROKE_COLOR_NORTH;
-                endX = startX = centerX - quarterRoad;
+                endX = startX = CENTER_X - quarterRoad;
                 startY = 0;
                 endY = HEIGHT;
                 break;
             case "south":
                 fillColor = FILL_COLOR_SOUTH;
                 strokeColor = STROKE_COLOR_SOUTH;
-                endX = startX = centerX + quarterRoad;
+                endX = startX = CENTER_X + quarterRoad;
                 startY = HEIGHT;
                 endY = -HEIGHT;
                 break;
             case "east":
                 fillColor = FILL_COLOR_EAST;
                 strokeColor = STROKE_COLOR_EAST;
-                startY = endY = centerY - quarterRoad;
+                startY = endY = CENTER_Y - quarterRoad;
                 startX = WIDTH;
                 endX = -WIDTH;
                 break;
             case "west":
                 fillColor = FILL_COLOR_WEST;
                 strokeColor = STROKE_COLOR_WEST;
-                startY = endY = centerY + quarterRoad;
+                startY = endY = CENTER_Y + quarterRoad;
                 startX = 0;
                 endX = WIDTH;
                 break;
