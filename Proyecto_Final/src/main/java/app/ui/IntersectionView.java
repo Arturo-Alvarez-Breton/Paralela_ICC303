@@ -46,10 +46,13 @@ public class IntersectionView extends BorderPane {
     private static final Color STROKE_COLOR_EAST = Color.DARKBLUE;
     private static final Color STROKE_COLOR_WEST = Color.DARKMAGENTA;
 
+    // lienzo donde se van a pintar las carreteras
     private final Pane intersectionPane;
+    // instancia del modelo intersection
     private final Intersection logicalIntersection;
+    // area para los logs
     private TextArea logArea;
-
+    //contador de vehiculos
     private static int vehicleCounter = 1;
 
     public IntersectionView() {
@@ -65,7 +68,7 @@ public class IntersectionView extends BorderPane {
         square.getChildren().add(intersectionPane);
         square.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         setLeft(square);
-        BorderPane.setMargin(square, new Insets(10));
+        BorderPane.setMargin(square, new Insets(0));
 
         // Área de log
         logArea = new TextArea();
