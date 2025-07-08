@@ -12,6 +12,7 @@ public class Vehicle {
     private VehicleTypeEnum type;
     private DirectionEnum direction;
     private boolean inIntersection;
+    private boolean readyToCross;  // Indica si el vehículo está en posición para cruzar
     // se coloca final porque no se va a cambiar el arrival order en el programa una vez el carro es introducido solo debe tener 1 unico valor en arrival order
     private final long arrivalOrder;
     private final Movement.Entry entryPoint;
@@ -26,6 +27,7 @@ public class Vehicle {
         this.direction      = direction;
         this.entryPoint     = entryPoint;
         this.inIntersection = false;
+        this.readyToCross   = false;  // Inicialmente no está listo para cruzar
     }
 
     public String getId() {
@@ -67,6 +69,14 @@ public class Vehicle {
     public Movement getMovement() {
         return new Movement(entryPoint,
                 Movement.Turn.valueOf(direction.name()));
+    }
+
+    public boolean isReadyToCross() {
+        return readyToCross;
+    }
+    
+    public void setReadyToCross(boolean readyToCross) {
+        this.readyToCross = readyToCross;
     }
 }
 

@@ -23,6 +23,9 @@ public class TrafficController {
     private final IntersectionManager manager = new IntersectionManager();
     private final ScheduledExecutorService scheduler;
     
+    // Referencia a la vista para verificar el estado de animaciones
+    private final app.ui.IntersectionView intersectionView;
+    
     // === GESTIÓN DE CARRILES OCUPADOS ===
     /**
      * Mapa que mantiene los carriles ocupados por cada intersección.
@@ -38,9 +41,11 @@ public class TrafficController {
     private static final int LANE_OCCUPATION_TIME_SECONDS = 5;
 
     public TrafficController(List<Intersection> intersections,
-                             List<TrafficLight> trafficLights) {
+                             List<TrafficLight> trafficLights,
+                             app.ui.IntersectionView intersectionView) {
         this.intersections = intersections;
         this.trafficLights = trafficLights;
+        this.intersectionView = intersectionView;
         this.scheduler = Executors.newScheduledThreadPool(10);
         
         // Inicializar estructura de carriles ocupados - thread-safe
@@ -50,6 +55,12 @@ public class TrafficController {
         for (Intersection intersection : intersections) {
             occupiedLanes.put(intersection, ConcurrentHashMap.newKeySet());
         }
+    }
+    
+    // Constructor original mantenido para compatibilidad
+    public TrafficController(List<Intersection> intersections,
+                             List<TrafficLight> trafficLights) {
+        this(intersections, trafficLights, null);
     }
 
     /**
@@ -90,6 +101,12 @@ public class TrafficController {
      * @param intersection Intersección a procesar
      */
     private void processIntersectionSafely(Intersection intersection) {
+        // === VERIFICAR SI HAY ANIMACIONES EN PROGRESO ===
+        if (intersectionView != null && intersectionView.isCrossingAnimationInProgress()) {
+            // Hay una animación de cruce en progreso, esperar a que termine
+            return;
+        }
+        
         // === PASO 1: PEEK - Obtener vehículos sin extraerlos ===
         List<Vehicle> queuedVehicles = intersection.peekAllVehicles();
         
@@ -102,6 +119,12 @@ public class TrafficController {
             // Verificar que el vehículo no esté ya en la intersección
             if (candidateVehicle.isInIntersection()) {
                 continue; // Ya está procesándose
+            }
+            
+            // === VERIFICAR QUE EL VEHÍCULO ESTÉ LISTO PARA CRUZAR ===
+            // Solo procesar vehículos que han llegado a la línea de parada
+            if (!candidateVehicle.isReadyToCross()) {
+                continue; // Todavía está aproximándose a la intersección
             }
             
             // === PASO 3: VALIDAR SEGURIDAD CON INTERSECTION MANAGER ===

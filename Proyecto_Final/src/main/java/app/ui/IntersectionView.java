@@ -69,6 +69,18 @@ public class IntersectionView extends BorderPane {
     //contador de vehiculos
     private static int vehicleCounter = 1;
 
+    // === SISTEMA DE COLISIONES - Contadores de vehículos esperando ===
+    private int vehiclesWaitingNorth = 0;
+    private int vehiclesWaitingSouth = 0;
+    private int vehiclesWaitingEast = 0;
+    private int vehiclesWaitingWest = 0;
+    
+    // Distancia entre vehículos en la cola (tamaño aproximado de un vehículo)
+    private static final double VEHICLE_SPACING = 25.0;
+    
+    // === CONTROL DE ANIMACIONES ===
+    private boolean crossingAnimationInProgress = false;  // Indica si hay una animación de cruce en progreso
+
     public IntersectionView() {
         this.logicalIntersection = new Intersection("case-1", true);
         
@@ -78,7 +90,7 @@ public class IntersectionView extends BorderPane {
         
         List<TrafficLight> trafficLights = new ArrayList<>(); // Por ahora vacío
         
-        this.trafficController = new TrafficController(intersections, trafficLights);
+        this.trafficController = new TrafficController(intersections, trafficLights, this);
         // Iniciar el control automático de tráfico
         trafficController.startControl();
 
@@ -215,11 +227,15 @@ public class IntersectionView extends BorderPane {
 
     /**
      * FASE 1: Anima el vehículo desde el borde hasta la línea de parada antes del cruce
+     * MODIFICADO: Incluye sistema de colisiones para evitar superposición visual
      */
     private void animateToStopLine(VehicleView vehicle, Vehicle logicalVehicle, String entryPoint, DirectionEnum turn) {
-        // Calcular posiciones de inicio y parada
+        // === SISTEMA DE COLISIONES: Incrementar contador y calcular posición en cola ===
+        int queuePosition = incrementWaitingCounter(entryPoint);
+        
+        // Calcular posiciones de inicio y parada (con spacing para evitar colisiones)
         double[] startPos = getStartPosition(entryPoint);
-        double[] stopPos = getStopLinePosition(entryPoint);
+        double[] stopPos = getStopLinePositionWithSpacing(entryPoint, queuePosition);
         
         // Posicionar vehículo en el inicio
         vehicle.setPosition(startPos[0], startPos[1]);
@@ -232,7 +248,14 @@ public class IntersectionView extends BorderPane {
         approachTransition.setCycleCount(1);
         
         approachTransition.setOnFinished(e -> {
-            log("⏸️ Vehículo " + logicalVehicle.getId() + " esperando autorización en " + entryPoint);
+            log("⏸️ Vehículo " + logicalVehicle.getId() + " esperando autorización en " + entryPoint + " (posición en cola: " + queuePosition + ")");
+            
+            // === MARCAR VEHÍCULO COMO LISTO PARA CRUZAR ===
+            // Ahora que ha llegado a la línea de parada, está listo para ser procesado
+            logicalVehicle.setReadyToCross(true);
+            
+            // === VISUALIZACIÓN DE PRIORIDAD ===
+            updateVehiclePriorityVisuals(vehicle, logicalVehicle);
             
             // === FASE 2: ESPERAR AUTORIZACIÓN Y CRUZAR ===
             waitForAuthorizationAndCross(vehicle, logicalVehicle, entryPoint, turn);
@@ -242,8 +265,55 @@ public class IntersectionView extends BorderPane {
     }
 
     /**
+     * Actualiza la visualización del vehículo según su prioridad en la cola
+     */
+    private void updateVehiclePriorityVisuals(VehicleView vehicle, Vehicle logicalVehicle) {
+        List<Vehicle> queuedVehicles = logicalIntersection.peekAllVehicles();
+        
+        // Verificar si el vehículo está en la cola
+        boolean vehicleInQueue = queuedVehicles.stream()
+                .anyMatch(v -> v.getId().equals(logicalVehicle.getId()));
+        
+        if (!vehicleInQueue) {
+            // Si el vehículo no está en la cola (ya fue procesado), no actualizar visuales
+            return;
+        }
+        
+        // Si no hay vehículos en la cola, algo salió mal
+        if (queuedVehicles.isEmpty()) {
+            return;
+        }
+        
+        // Comprobar si es el siguiente en la cola de prioridad
+        Vehicle firstVehicle = queuedVehicles.get(0);
+        boolean isNext = firstVehicle.getId().equals(logicalVehicle.getId());
+        
+        // Actualizar visual según prioridad
+        if (isNext) {
+            // Este vehículo es el siguiente - destacarlo visualmente
+            if (logicalVehicle.getType() == VehicleTypeEnum.EMERGENCY) {
+                // Vehículo de emergencia con alta prioridad
+                vehicle.setNextInQueueVisual(true, true);
+            } else {
+                // Vehículo normal pero siguiente en cola
+                vehicle.setNextInQueueVisual(true, false);
+            }
+        } else {
+            // No es el siguiente, quitar cualquier destacado
+            vehicle.setNextInQueueVisual(false, false);
+            
+            // Comprobar posición en la cola para mostrar información
+            int position = queuedVehicles.indexOf(logicalVehicle) + 1;
+            if (position > 0) {
+                log("🔢 Vehículo " + logicalVehicle.getId() + " en posición " + 
+                    position + " de " + queuedVehicles.size() + " en la cola");
+            }
+        }
+    }
+
+    /**
      * FASE 2: Espera autorización del TrafficController y ejecuta el cruce completo
-     * CORREGIDO: Procede automáticamente con pausa realista
+     * MEJORADO: Respeta estrictamente el orden de la cola de prioridad
      */
     private void waitForAuthorizationAndCross(VehicleView vehicle, Vehicle logicalVehicle, String entryPoint, DirectionEnum turn) {
         // Crear un thread que simule una pausa realista y luego proceda
@@ -252,38 +322,72 @@ public class IntersectionView extends BorderPane {
                 // Pausa breve para simular verificación (1 segundo)
                 Thread.sleep(1000);
                 
-                // Verificar si hay vehículos en conflicto
+                // Obtener todos los vehículos en la cola con su orden de prioridad
                 List<Vehicle> queuedVehicles = logicalIntersection.peekAllVehicles();
-                boolean canProceed = true;
+                boolean canProceed = false;
                 
-                // Lógica simplificada: si es el único vehículo o el primero, puede proceder
-                if (queuedVehicles.size() > 0) {
-                    // Verificar si es el primer vehículo en la cola
-                    Vehicle firstVehicle = queuedVehicles.get(0);
-                    canProceed = firstVehicle.getId().equals(logicalVehicle.getId());
-                    
-                    // Si no es el primero, verificar si hay conflictos reales
-                    if (!canProceed) {
-                        // Por ahora, permitir proceder si no hay más de 3 vehículos esperando
-                        // (esto simula un comportamiento más permisivo para testing)
-                        canProceed = queuedVehicles.size() < 4;
+                // Verificar si el vehículo aún está en la cola
+                boolean vehicleInQueue = queuedVehicles.stream()
+                        .anyMatch(v -> v.getId().equals(logicalVehicle.getId()));
+                
+                if (!vehicleInQueue) {
+                    // El vehículo ya fue procesado por el TrafficController
+                    if (logicalVehicle.isInIntersection()) {
+                        // Ya está cruzando, proceder con la animación
+                        Platform.runLater(() -> {
+                            log("🚦 Vehículo " + logicalVehicle.getId() + " ya fue autorizado por el TrafficController");
+                            decrementWaitingCounter(entryPoint);
+                            executeCompleteMovement(vehicle, logicalVehicle, entryPoint, turn);
+                        });
+                        return;
+                    } else {
+                        // Error real - el vehículo no está en la cola ni cruzando
+                        log("⚠️ Error: Vehículo " + logicalVehicle.getId() + " no está en la cola ni cruzando");
+                        return;
                     }
                 }
                 
-                // Una vez autorizado, ejecutar el cruce en el hilo de JavaFX
+                if (queuedVehicles.isEmpty()) {
+                    return; // No hay vehículos esperando
+                }
+                
+                // === VERIFICACIÓN ESTRICTA DE PRIORIDAD ===
+                // Solo puede proceder si es exactamente el primer vehículo en la cola de prioridad
+                Vehicle firstVehicle = queuedVehicles.get(0);
+                canProceed = firstVehicle.getId().equals(logicalVehicle.getId());
+                
                 if (canProceed) {
+                    // Es el próximo vehículo según la cola de prioridad
+                    String priorityInfo = firstVehicle.getType() == VehicleTypeEnum.EMERGENCY ? 
+                            " (PRIORIDAD: Emergencia)" : " (PRIORIDAD: Orden de llegada)";
+                    
                     Platform.runLater(() -> {
-                        log("✅ Vehículo " + logicalVehicle.getId() + " autorizado para cruzar");
+                        log("✅ Vehículo " + logicalVehicle.getId() + priorityInfo + " autorizado para cruzar");
+                        
+                        // === SISTEMA DE COLISIONES: Decrementar contador al cruzar ===
+                        decrementWaitingCounter(entryPoint);
+                        
                         executeCompleteMovement(vehicle, logicalVehicle, entryPoint, turn);
                     });
                 } else {
-                    // Si no puede proceder, volver a intentar después de un tiempo
+                    // No es su turno según la cola de prioridad
+                    String waitReason;
+                    if (firstVehicle.getType() == VehicleTypeEnum.EMERGENCY && logicalVehicle.getType() != VehicleTypeEnum.EMERGENCY) {
+                        waitReason = " (esperando a vehículo de emergencia)";
+                    } else {
+                        waitReason = " (esperando su turno, posición en cola: " + 
+                                      (queuedVehicles.indexOf(logicalVehicle) + 1) + " de " + 
+                                      queuedVehicles.size() + ")";
+                    }
+                    
+                    final String reasonToWait = waitReason;
                     Platform.runLater(() -> {
-                        log("⚠️ Vehículo " + logicalVehicle.getId() + " debe esperar más tiempo");
-                        // Reintentar después de 2 segundos
+                        log("⏱️ Vehículo " + logicalVehicle.getId() + reasonToWait);
+                        
+                        // Reintentar después de 1 segundo
                         Thread retryThread = new Thread(() -> {
                             try {
-                                Thread.sleep(2000);
+                                Thread.sleep(1000);
                                 Platform.runLater(() -> waitForAuthorizationAndCross(vehicle, logicalVehicle, entryPoint, turn));
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
@@ -308,9 +412,19 @@ public class IntersectionView extends BorderPane {
      * Implementación para U-TURNS desde TODAS las direcciones
      */
     private void executeCompleteMovement(VehicleView vehicle, Vehicle logicalVehicle, String entryPoint, DirectionEnum turn) {
-        // Remover vehículo de la cola (autorizado para proceder)
-        logicalIntersection.removeVehicle(logicalVehicle);
+        // Verificar si el vehículo todavía está en la cola antes de intentar removerlo
+        // (El TrafficController podría haberlo removido ya)
+        if (!logicalVehicle.isInIntersection()) {
+            // Solo intentar remover si aún no está en la intersección
+            logicalIntersection.removeVehicle(logicalVehicle);
             logicalVehicle.setInIntersection(true);
+        }
+        
+        // === MARCAR ANIMACIÓN DE CRUCE EN PROGRESO ===
+        crossingAnimationInProgress = true;
+        
+        // === ACTUALIZAR VISUALMENTE LA COLA DE VEHÍCULOS ===
+        updateWaitingVehiclesPriority();
         
         // === IMPLEMENTAR MOVIMIENTOS ANGULARES PARA TODAS LAS DIRECCIONES ===
         switch (entryPoint) {
@@ -349,6 +463,44 @@ public class IntersectionView extends BorderPane {
             default -> executeSimpleMovement(vehicle, logicalVehicle, entryPoint, turn);
         }
     }
+    
+    /**
+     * Actualiza la visualización de prioridad de todos los vehículos en espera
+     * Se ejecuta después de que un vehículo sale de la intersección
+     */
+    private void updateWaitingVehiclesPriority() {
+        // Obtener la lista actualizada de vehículos en la cola
+        List<Vehicle> queuedVehicles = logicalIntersection.peekAllVehicles();
+        
+        if (queuedVehicles.isEmpty()) {
+            return;  // No hay vehículos esperando
+        }
+        
+        // Actualizar el estado del próximo vehículo en la cola
+        Vehicle nextVehicle = queuedVehicles.get(0);
+        
+        // Buscar la representación visual del vehículo en el panel
+        for (javafx.scene.Node node : intersectionPane.getChildren()) {
+            if (node instanceof VehicleView vehicleView) {
+                // Intentar encontrar el vehículo correspondiente en la cola
+                for (Vehicle queuedVehicle : queuedVehicles) {
+                    // Si este es el siguiente en la cola, destacarlo
+                    if (queuedVehicle.equals(nextVehicle)) {
+                        vehicleView.setNextInQueueVisual(true, nextVehicle.getType() == VehicleTypeEnum.EMERGENCY);
+                        
+                        // Mostrar mensaje en el log indicando cuál es el próximo vehículo
+                        log("🚦 Próximo vehículo a cruzar: " + nextVehicle.getId() + 
+                           (nextVehicle.getType() == VehicleTypeEnum.EMERGENCY ? " (EMERGENCIA)" : ""));
+                        
+                        break;
+                    } else {
+                        // No es el próximo, quitar cualquier destacado
+                        vehicleView.setNextInQueueVisual(false, false);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Implementación específica del U-Turn desde el Sur
@@ -384,14 +536,8 @@ public class IntersectionView extends BorderPane {
         uTurnTransition.setCycleCount(1);
         
         uTurnTransition.setOnFinished(e -> {
-            // Marcar como completado y limpiar
-            logicalVehicle.setInIntersection(false);
-            intersectionPane.getChildren().remove(vehicle);
-            
-            // Mostrar feedback del carril utilizado
-            showLaneFeedback(startX, startY, finalX, finalY);
-            
-            log("🔄 Vehículo " + logicalVehicle.getId() + " completó U-turn angular desde sur");
+            finishVehicleAnimation(vehicle, logicalVehicle, startX, startY, finalX, finalY,
+                                 "U-turn angular desde sur");
         });
         
         uTurnTransition.play();
@@ -573,10 +719,8 @@ public class IntersectionView extends BorderPane {
         rightTurnTransition.setCycleCount(1);
         
         rightTurnTransition.setOnFinished(e -> {
-            logicalVehicle.setInIntersection(false);
-            intersectionPane.getChildren().remove(vehicle);
-            showLaneFeedback(startX, startY, finalX, finalY);
-            log("➡️ Vehículo " + logicalVehicle.getId() + " completó giro a la DERECHA desde sur");
+            finishVehicleAnimation(vehicle, logicalVehicle, startX, startY, finalX, finalY,
+                                 "giro a la DERECHA desde sur");
         });
         
         rightTurnTransition.play();
@@ -652,10 +796,8 @@ public class IntersectionView extends BorderPane {
         straightTransition.setCycleCount(1);
         
         straightTransition.setOnFinished(e -> {
-            logicalVehicle.setInIntersection(false);
-            intersectionPane.getChildren().remove(vehicle);
-            showLaneFeedback(startX, startY, finalX, finalY);
-            log("⬆️ Vehículo " + logicalVehicle.getId() + " completó movimiento DIRECTO desde sur");
+            finishVehicleAnimation(vehicle, logicalVehicle, startX, startY, finalX, finalY,
+                                 "movimiento DIRECTO desde sur");
         });
         
         straightTransition.play();
@@ -1057,10 +1199,8 @@ public class IntersectionView extends BorderPane {
         crossingTransition.setCycleCount(1);
         
         crossingTransition.setOnFinished(e -> {
-            logicalVehicle.setInIntersection(false);
-            intersectionPane.getChildren().remove(vehicle);
-            showLaneFeedback(stopPos[0], stopPos[1], endPos[0], endPos[1]);
-            log("✅ Vehículo " + logicalVehicle.getId() + " completó movimiento " + turn);
+            finishVehicleAnimation(vehicle, logicalVehicle, stopPos[0], stopPos[1], endPos[0], endPos[1],
+                                 "movimiento " + turn);
         });
         
         crossingTransition.play();
@@ -1222,4 +1362,132 @@ public class IntersectionView extends BorderPane {
             return width;
         }
     }
-}
+
+    // === MÉTODOS DEL SISTEMA DE COLISIONES ===
+    
+    /**
+     * Incrementa el contador de vehículos esperando en una dirección específica
+     * @param entryPoint La dirección de entrada del vehículo
+     * @return La posición en la cola (0 = primer vehículo, 1 = segundo, etc.)
+     */
+    private int incrementWaitingCounter(String entryPoint) {
+        switch (entryPoint) {
+            case "norte" -> vehiclesWaitingNorth++;
+            case "sur" -> vehiclesWaitingSouth++;
+            case "este" -> vehiclesWaitingEast++;
+            case "oeste" -> vehiclesWaitingWest++;
+        }
+        return getCurrentWaitingCount(entryPoint) - 1; // Retorna posición 0-indexada
+    }
+    
+    /**
+     * Decrementa el contador de vehículos esperando en una dirección específica
+     * @param entryPoint La dirección de entrada del vehículo que se está moviendo
+     */
+    private void decrementWaitingCounter(String entryPoint) {
+        switch (entryPoint) {
+            case "norte" -> {
+                if (vehiclesWaitingNorth > 0) vehiclesWaitingNorth--;
+            }
+            case "sur" -> {
+                if (vehiclesWaitingSouth > 0) vehiclesWaitingSouth--;
+            }
+            case "este" -> {
+                if (vehiclesWaitingEast > 0) vehiclesWaitingEast--;
+            }
+            case "oeste" -> {
+                if (vehiclesWaitingWest > 0) vehiclesWaitingWest--;
+            }
+        }
+    }
+    
+    /**
+     * Obtiene el número actual de vehículos esperando en una dirección
+     * @param entryPoint La dirección de entrada
+     * @return El número de vehículos esperando
+     */
+    private int getCurrentWaitingCount(String entryPoint) {
+        return switch (entryPoint) {
+            case "norte" -> vehiclesWaitingNorth;
+            case "sur" -> vehiclesWaitingSouth;
+            case "este" -> vehiclesWaitingEast;
+            case "oeste" -> vehiclesWaitingWest;
+            default -> 0;
+        };
+    }
+    
+    /**
+     * Calcula la posición de parada con spacing para evitar colisiones
+     * @param entryPoint La dirección de entrada del vehículo
+     * @param queuePosition La posición en la cola (0 = primero, 1 = segundo, etc.)
+     * @return Array con las coordenadas [x, y] de la posición de parada con spacing
+     */
+    private double[] getStopLinePositionWithSpacing(String entryPoint, int queuePosition) {
+        // Obtener la posición base de la línea de parada
+        double[] basePos = getStopLinePosition(entryPoint);
+        double x = basePos[0];
+        double y = basePos[1];
+        
+        // Aplicar spacing según la dirección de entrada
+        double offset = queuePosition * VEHICLE_SPACING;
+        
+        switch (entryPoint) {
+            case "norte" -> {
+                // Los vehículos se alinean hacia atrás (menor Y)
+                y = basePos[1] - offset;
+            }
+            case "sur" -> {
+                // Los vehículos se alinean hacia atrás (mayor Y)
+                y = basePos[1] + offset;
+            }
+            case "este" -> {
+                // Los vehículos se alinean hacia atrás (mayor X)
+                x = basePos[0] + offset;
+            }
+            case "oeste" -> {
+                // Los vehículos se alinean hacia atrás (menor X)
+                x = basePos[0] - offset;
+            }
+        }
+        
+        return new double[]{x, y};
+    }
+
+    /**
+     * Método público para verificar si hay una animación de cruce en progreso.
+     * Usado por el TrafficController para evitar procesar vehículos durante animaciones.
+     * @return true si hay una animación de cruce en progreso
+     */
+    public boolean isCrossingAnimationInProgress() {
+        return crossingAnimationInProgress;
+    }
+    
+    /**
+     * Marca el final de una animación de cruce.
+     * Debe ser llamado al terminar cualquier animación de movimiento por la intersección.
+     */
+    private void onCrossingAnimationFinished(String vehicleId) {
+        crossingAnimationInProgress = false;
+        log("🏁 Animación de cruce completada para vehículo " + vehicleId + " - Intersección libre");
+    }
+    
+    /**
+     * Método helper para finalizar cualquier animación de vehículo
+     * Centraliza la lógica común de finalización
+     */
+    private void finishVehicleAnimation(VehicleView vehicle, Vehicle logicalVehicle, 
+                                       double startX, double startY, double finalX, double finalY,
+                                       String movementDescription) {
+        // Marcar como completado y limpiar
+        logicalVehicle.setInIntersection(false);
+        intersectionPane.getChildren().remove(vehicle);
+        
+        // Mostrar feedback del carril utilizado
+        showLaneFeedback(startX, startY, finalX, finalY);
+        
+        // === MARCAR ANIMACIÓN COMO COMPLETADA ===
+        onCrossingAnimationFinished(logicalVehicle.getId());
+        
+        log("✅ Vehículo " + logicalVehicle.getId() + " completó " + movementDescription);
+    }
+ }
