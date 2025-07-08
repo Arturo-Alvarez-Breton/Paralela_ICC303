@@ -205,7 +205,7 @@ public class IntersectionView extends BorderPane {
         Vehicle logicalVehicle = new Vehicle(vehicleId, type, turn);
         logicalIntersection.addVehicle(logicalVehicle);
 
-        VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor, type, turn);
+        VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor, type, turn, entryPoint);
         intersectionPane.getChildren().add(vehicle);
 
         Line path = new Line(startX, startY, endX, endY);

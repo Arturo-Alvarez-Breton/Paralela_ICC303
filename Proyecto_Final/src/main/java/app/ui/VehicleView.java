@@ -15,7 +15,7 @@ public class VehicleView extends Group {
     private VehicleTypeEnum type;
 
     public VehicleView(double centerX, double centerY, Color colorFill, Color colorStroke,
-                       VehicleTypeEnum type, DirectionEnum direction) {
+                       VehicleTypeEnum type, DirectionEnum direction, String entryPoint) {
         this.type = type;
         circle = new Circle(centerX, centerY, RADIUS);
         circle.setFill(colorFill);
@@ -29,17 +29,39 @@ public class VehicleView extends Group {
         }
 
         // Dirección visual como texto sobre el círculo
-        String dirSymbol = switch (direction) {
-            case STRAIGHT -> "↑";
-            case LEFT -> "↩";
-            case RIGHT -> "→";
-            case U_TURN -> "⟲";
-        };
+        String dirSymbol = getDirectionSymbol(direction, entryPoint);
+
         directionText = new Text(centerX - 7, centerY + 5, dirSymbol);
         directionText.setFont(Font.font("Arial", 16));
         directionText.setFill(type == VehicleTypeEnum.EMERGENCY ? Color.WHITE : Color.BLACK);
 
         this.getChildren().addAll(circle, directionText);
+    }
+
+    private String getDirectionSymbol(DirectionEnum direction, String entryPoint) {
+        String[][] symbols = {
+            {"↓", "→", "←", "↑"}, // Norte
+            {"←", "↓", "↑", "→"}, // Este
+            {"↑", "←", "→", "↓"}, // Sur
+            {"→", "↑", "↓", "←"}  // Oeste
+        };
+
+        int entryIndex = switch (entryPoint) {
+            case "norte" -> 0;
+            case "este" -> 1;
+            case "sur" -> 2;
+            case "oeste" -> 3;
+            default -> throw new IllegalArgumentException("Invalid entry point: " + entryPoint);
+        };
+
+        int tunrnIndex = switch (direction) {
+            case STRAIGHT -> 0;
+            case LEFT -> 1;
+            case RIGHT -> 2;
+            case U_TURN -> 3;
+        };
+
+        return symbols[entryIndex][tunrnIndex];
     }
 
     public VehicleTypeEnum getType() {
