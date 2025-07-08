@@ -6,9 +6,13 @@ import app.enums.VehicleTypeEnum;
 
 import app.model.Vehicle;
 import javafx.animation.PathTransition;
+import javafx.application.Platform;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
+import javafx.scene.effect.BlendMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
@@ -43,30 +47,47 @@ public class IntersectionView extends BorderPane {
     private static final Color STROKE_COLOR_WEST = Color.DARKMAGENTA;
 
     private final Pane intersectionPane;
-
     private final Intersection logicalIntersection;
+    private TextArea logArea;
+
+    private static int vehicleCounter = 1;
 
     public IntersectionView() {
         this.logicalIntersection = new Intersection("case-1", true);
 
-        // ya no fijamos prefSize al BorderPane, dejamos que el contenedor lo escale
         intersectionPane = new Pane();
         drawBackground();
         drawRoads();
         drawCenterLines();
         drawStopSigns();
 
-        // 1) Construimos el contenedor que fuerza 1x1
         SquarePane square = new SquarePane();
         square.getChildren().add(intersectionPane);
-        // para que crezca con el espacio disponible
         square.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         setLeft(square);
         BorderPane.setMargin(square, new Insets(10));
 
-        // 2) Añadimos el grid de controles a la derecha
-        setRight(createControlGrid());
-        BorderPane.setMargin(getRight(), new Insets(10));
+        // Área de log
+        logArea = new TextArea();
+        logArea.setEditable(false);
+        logArea.setPrefRowCount(12);
+        logArea.setPrefColumnCount(40);
+        logArea.setStyle("-fx-font-family: monospace; -fx-font-size: 14px;");
+        logArea.setWrapText(true);
+
+        Label normalLabel = new Label("Vehículos normales");
+        Label emergencyLabel = new Label("Vehículos de emergencia");
+
+        VBox rightBox = new VBox(
+                10,
+                normalLabel,
+                createControlGrid(VehicleTypeEnum.NORMAL),
+                emergencyLabel,
+                createControlGrid(VehicleTypeEnum.EMERGENCY),
+                logArea
+        );
+        setRight(rightBox);
+        BorderPane.setMargin(rightBox, new Insets(10));
     }
 
     private void drawBackground() {
@@ -126,15 +147,23 @@ public class IntersectionView extends BorderPane {
         intersectionPane.getChildren().addAll(northStop, southStop, eastStop, westStop);
     }
 
+    // Llamar este método para mostrar mensajes en el log
+    private void log(String msg) {
+        Platform.runLater(() -> {
+            logArea.appendText(msg + "\n");
+        });
+    }
+
     /**
      * Crea un vehículo en el borde especificado y lo anima hacia el centro.
      */
-    private void addVehicleFrom(String entryPoint, DirectionEnum turn) {
-        // por ahora mantenemos tu lógica de animación lineal
-        // pero podrias guardarte el 'turn' en Vehicle y luego procesarlo.
+    /**
+     * Crea un vehículo en el borde especificado y lo anima hacia el centro.
+     * Ahora acepta tipo y muestra feedback visual.
+     */
+    private void addVehicleFrom(String entryPoint, DirectionEnum turn, VehicleTypeEnum type) {
         Color fillColor, strokeColor;
-        double startX = CENTER, startY = CENTER;
-        double endX = CENTER, endY = CENTER;
+        double startX = CENTER, startY = CENTER, endX = CENTER, endY = CENTER;
 
         switch (entryPoint) {
             case "norte":
@@ -159,7 +188,7 @@ public class IntersectionView extends BorderPane {
                 startX = SIZE;
                 startY = CENTER - QUARTER_ROAD_WIDTH;
                 endX = getCenterCarPosition(turn, -1);
-                endY = CENTER - QUARTER_ROAD_WIDTH;;
+                endY = CENTER - QUARTER_ROAD_WIDTH;
                 break;
             case "oeste":
                 fillColor = FILL_COLOR_WEST;
@@ -167,29 +196,54 @@ public class IntersectionView extends BorderPane {
                 startX = 0;
                 startY = CENTER + QUARTER_ROAD_WIDTH;
                 endX = getCenterCarPosition(turn, 1);
-                endY = CENTER + QUARTER_ROAD_WIDTH;;
+                endY = CENTER + QUARTER_ROAD_WIDTH;
                 break;
             default:
                 fillColor = Color.GRAY;
                 strokeColor = Color.BLACK;
         }
 
-        // Crear vehículo
-        Vehicle logicalVehicle = new Vehicle("V" + System.nanoTime(), VehicleTypeEnum.NORMAL, turn);
-        logicalIntersection.addVehicle(logicalVehicle); // Suponiendo que tengas este metodo
+        String vehicleId = "v" + (vehicleCounter++);
 
-        // Crear vista visual y animacion
-        VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor);
+        Vehicle logicalVehicle = new Vehicle(vehicleId, type, turn);
+        logicalIntersection.addVehicle(logicalVehicle);
+
+        VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor, type, turn);
         intersectionPane.getChildren().add(vehicle);
 
         Line path = new Line(startX, startY, endX, endY);
-        PathTransition transition = new PathTransition(Duration.seconds(3), path, vehicle);
+        final double fxStartX = startX, fxStartY = startY, fxEndX = endX, fxEndY = endY;
+
+        javafx.animation.PathTransition transition = new javafx.animation.PathTransition(Duration.seconds(3), path, vehicle);
         transition.setCycleCount(1);
         transition.setOnFinished(e -> {
-            logicalVehicle.setInTersection(true); // Se marca como dentro de la intersección
-            intersectionPane.getChildren().remove(vehicle); // Quitarlo visualmente
+            logicalVehicle.setInTersection(true);
+            intersectionPane.getChildren().remove(vehicle);
+            showLaneFeedback(fxStartX, fxStartY, fxEndX, fxEndY);
+            log("Vehículo " + logicalVehicle.getId() + " (" + logicalVehicle.getType() + ") cruzó (" + turn + ")");
         });
+
+        log("Vehículo " + logicalVehicle.getId() + " (" + logicalVehicle.getType() + ") ingresando desde " + entryPoint + " (" + turn + ")");
         transition.play();
+    }
+
+    // Dibuja un rectángulo semitransparente en el carril ocupado durante 0.5s
+    private void showLaneFeedback(double startX, double startY, double endX, double endY) {
+        double x = Math.min(startX, endX);
+        double y = Math.min(startY, endY);
+        double w = Math.abs(endX - startX) > 1 ? Math.abs(endX - startX) : 20;
+        double h = Math.abs(endY - startY) > 1 ? Math.abs(endY - startY) : 20;
+
+        Rectangle lane = new Rectangle(x, y, w, h);
+        lane.setFill(Color.ORANGE.deriveColor(1, 1, 1, 0.35));
+        lane.setBlendMode(BlendMode.SRC_OVER);
+        intersectionPane.getChildren().add(lane);
+
+        // Quitar tras un breve tiempo
+        new Thread(() -> {
+            try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+            Platform.runLater(() -> intersectionPane.getChildren().remove(lane));
+        }).start();
     }
 
     private int getCenterCarPosition(DirectionEnum turn, int offsetSign) {
@@ -208,47 +262,38 @@ public class IntersectionView extends BorderPane {
         return null;
     }
 
-    private GridPane createControlGrid() {
+    private GridPane createControlGrid(VehicleTypeEnum type) {
         String[] cardinals = {"Norte", "Este", "Sur", "Oeste"};
         String[] actionNames = {"STRAIGHT", "LEFT", "RIGHT", "U_TURN"};
 
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20));
+        grid.setPadding(new Insets(8));
         grid.setStyle("-fx-background-color: #f0f0f0;");
 
-        // Ya no usamos percentWidth ni Hgrow
-        // Simplemente dejamos que cada columna se dimensione a su contenido
-
-        // Cabeceras
         for (int c = 0; c < cardinals.length; c++) {
             Label lbl = new Label(cardinals[c]);
             GridPane.setHalignment(lbl, HPos.CENTER);
             grid.add(lbl, c, 0);
         }
-
-        // Botones
         for (int r = 0; r < actionNames.length; r++) {
             for (int c = 0; c < cardinals.length; c++) {
                 String dir = cardinals[c].toLowerCase();
-                 String action = actionNames[r];
-                Button btn = new Button(action.replace('_','‑'));
-                btn.setMaxWidth(Double.MAX_VALUE); // para que estiren dentro de su celda, pero no más allá
+                String action = actionNames[r];
+                Button btn = new Button(action.replace('_', '\u2011'));
+                btn.setMaxWidth(Double.MAX_VALUE);
                 btn.setStyle(
                         "-fx-border-color: black; " +
                                 "-fx-border-radius: 8; " +
                                 "-fx-background-radius: 8;"
                 );
-                btn.setOnAction(e -> addVehicleFrom(dir, DirectionEnum.valueOf(action)));
+                btn.setOnAction(e -> addVehicleFrom(dir, DirectionEnum.valueOf(action), type));
                 grid.add(btn, c, r + 1);
             }
         }
-
-        // Fijamos su tamaño al computado
         grid.setPrefHeight(ROAD_WIDTH);
         grid.setMaxHeight(ROAD_WIDTH);
-
         return grid;
     }
 
