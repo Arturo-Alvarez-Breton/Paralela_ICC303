@@ -18,17 +18,13 @@ public class Intersection {
         //Inicializar una cola con comparator que prioriza los vehiculos de emergencia
         this.vehicleQueue = new PriorityBlockingQueue<>(10, (v1, v2) -> {
             if (v1.getType() == VehicleTypeEnum.EMERGENCY && v2.getType() != VehicleTypeEnum.EMERGENCY) {
-                return -1; // v1 tiene mayor prioridad
+                return -1;  // v1 antes que v2
             } else if (v1.getType() != VehicleTypeEnum.EMERGENCY && v2.getType() == VehicleTypeEnum.EMERGENCY) {
-                return 1; // v2 tiene mayor prioridad
+                return 1;   // v2 antes que v1
             }
-
-            return 0;
+            // si son del mismo tipo por ejemplo dos ambulancias ordenar por arrivalOrder (menor = llegó antes)
+            return Long.compare(v1.getArrivalOrder(), v2.getArrivalOrder());
         });
-    }
-
-    public void addvehicle(Vehicle vehicle) {
-        vehicleQueue.offer(vehicle);
     }
 
     public Vehicle getNextVehicle() {

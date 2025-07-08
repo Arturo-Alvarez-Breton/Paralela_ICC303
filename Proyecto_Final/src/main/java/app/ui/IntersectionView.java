@@ -186,7 +186,7 @@ public class IntersectionView extends BorderPane {
         PathTransition transition = new PathTransition(Duration.seconds(3), path, vehicle);
         transition.setCycleCount(1);
         transition.setOnFinished(e -> {
-            logicalVehicle.setInTersection(true); // Se marca como dentro de la intersección
+            logicalVehicle.setInIntersection(true); // Se marca como dentro de la intersección
             intersectionPane.getChildren().remove(vehicle); // Quitarlo visualmente
         });
         transition.play();
