@@ -538,6 +538,7 @@ public class IntersectionView extends BorderPane {
         log("📍 U-Turn Oeste: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
 
+    // ========== MOVIMIENTOS DESDE EL SUR ==========
     /**
      * Implementación específica del giro a la DERECHA desde el Sur
      * CORREGIDO: Trayectoria angular - hacia la DERECHA (este) luego hacia arriba
@@ -594,11 +595,11 @@ public class IntersectionView extends BorderPane {
         
         // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la IZQUIERDA (oeste) ===
         double midX = CENTER - QUARTER_ROAD_WIDTH;  // Hacia la IZQUIERDA en coordenadas (oeste)
-        double midY = CENTER + QUARTER_ROAD_WIDTH;  // Carril oeste SUPERIOR (más lejos del centro)
+        double midY = CENTER - QUARTER_ROAD_WIDTH;  // Carril oeste SUPERIOR (más lejos del centro)
         
         // === PUNTO FINAL: Salir hacia el oeste ===
         double finalX = 0;                          // Salida por el oeste (izquierda)
-        double finalY = CENTER + QUARTER_ROAD_WIDTH; // Carril oeste SUPERIOR (correcto para giro izquierda)
+        double finalY = CENTER - QUARTER_ROAD_WIDTH; // Carril oeste SUPERIOR (correcto para giro izquierda)
         
         // Crear path angular con líneas rectas
         Path leftTurnPath = new Path();
@@ -672,40 +673,40 @@ public class IntersectionView extends BorderPane {
         // Posición actual: línea de parada del norte
         double startX = CENTER - QUARTER_ROAD_WIDTH;
         double startY = CENTER - HALF_ROAD_WIDTH;
-        
+
         // === PUNTO INTERMEDIO: Moverse verticalmente hacia abajo, luego horizontal hacia la derecha ===
         double midX = CENTER - QUARTER_ROAD_WIDTH;  // Mantener X
-        double midY = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro
-        
-        // === PUNTO FINAL: Salir hacia el este (derecha) ===
-        double finalX = SIZE;                       // Salida por el este
-        double finalY = CENTER - QUARTER_ROAD_WIDTH; // Carril inferior del este
-        
+        double midY = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro (más abajo)
+
+        // === PUNTO FINAL: Salir hacia el oeste (derecha) ===
+        double finalX = 0;                          // Salida por el este
+        double finalY = CENTER - QUARTER_ROAD_WIDTH; // Carril superior del este
+
         // Crear path angular con líneas rectas
-        Path rightTurnPath = new Path();
-        rightTurnPath.getElements().add(new MoveTo(startX, startY));
-        
+        Path leftTurnPath = new Path();
+        leftTurnPath.getElements().add(new MoveTo(startX, startY));
+
         // MOVIMIENTO 1: Línea vertical hacia el centro (ajustar altura)
         LineTo verticalMove = new LineTo(midX, midY);
-        
-        // MOVIMIENTO 2: Línea horizontal hacia la DERECHA (este)
+
+        // MOVIMIENTO 2: Línea horizontal hacia la derecha (este)
         LineTo horizontalMove = new LineTo(finalX, finalY);
-        
-        rightTurnPath.getElements().addAll(verticalMove, horizontalMove);
-        
+
+        leftTurnPath.getElements().addAll(verticalMove, horizontalMove);
+
         // Animación del giro a la derecha (3 segundos)
-        PathTransition rightTurnTransition = new PathTransition(Duration.seconds(3), rightTurnPath, vehicle);
-        rightTurnTransition.setCycleCount(1);
-        
-        rightTurnTransition.setOnFinished(e -> {
+        PathTransition leftTurnTransition = new PathTransition(Duration.seconds(3), leftTurnPath, vehicle);
+        leftTurnTransition.setCycleCount(1);
+
+        leftTurnTransition.setOnFinished(e -> {
             logicalVehicle.setInIntersection(false);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(startX, startY, finalX, finalY);
-            log("➡️ Vehículo " + logicalVehicle.getId() + " completó giro a la DERECHA desde norte");
+            log("⬅️ Vehículo " + logicalVehicle.getId() + " completó giro a la IZQUIERDA desde norte");
         });
-        
-        rightTurnTransition.play();
-        
+
+        leftTurnTransition.play();
+
         // Log detallado de la trayectoria
         log("📍 Giro Derecha Norte: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
@@ -717,39 +718,39 @@ public class IntersectionView extends BorderPane {
         // Posición actual: línea de parada del norte
         double startX = CENTER - QUARTER_ROAD_WIDTH;
         double startY = CENTER - HALF_ROAD_WIDTH;
-        
+
         // === PUNTO INTERMEDIO: Moverse verticalmente hacia abajo, luego horizontal hacia la izquierda ===
         double midX = CENTER - QUARTER_ROAD_WIDTH;  // Mantener X
-        double midY = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro (más abajo)
-        
-        // === PUNTO FINAL: Salir hacia el oeste (izquierda) ===
-        double finalX = 0;                          // Salida por el oeste
-        double finalY = CENTER + QUARTER_ROAD_WIDTH; // Carril superior del oeste
-        
+        double midY = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro
+
+        // === PUNTO FINAL: Salir hacia el este (izquierda) ===
+        double finalX = SIZE;                       // Salida por el este
+        double finalY = CENTER + QUARTER_ROAD_WIDTH; // Carril inferior del este
+
         // Crear path angular con líneas rectas
-        Path leftTurnPath = new Path();
-        leftTurnPath.getElements().add(new MoveTo(startX, startY));
-        
+        Path rightTurnPath = new Path();
+        rightTurnPath.getElements().add(new MoveTo(startX, startY));
+
         // MOVIMIENTO 1: Línea vertical hacia el centro (ajustar altura)
         LineTo verticalMove = new LineTo(midX, midY);
-        
-        // MOVIMIENTO 2: Línea horizontal hacia la IZQUIERDA (oeste)
+
+        // MOVIMIENTO 2: Línea horizontal hacia la izquirda (oeste)
         LineTo horizontalMove = new LineTo(finalX, finalY);
-        
-        leftTurnPath.getElements().addAll(verticalMove, horizontalMove);
-        
+
+        rightTurnPath.getElements().addAll(verticalMove, horizontalMove);
+
         // Animación del giro a la izquierda (3 segundos)
-        PathTransition leftTurnTransition = new PathTransition(Duration.seconds(3), leftTurnPath, vehicle);
-        leftTurnTransition.setCycleCount(1);
-        
-        leftTurnTransition.setOnFinished(e -> {
+        PathTransition rightTurnTransition = new PathTransition(Duration.seconds(3), rightTurnPath, vehicle);
+        rightTurnTransition.setCycleCount(1);
+
+        rightTurnTransition.setOnFinished(e -> {
             logicalVehicle.setInIntersection(false);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(startX, startY, finalX, finalY);
-            log("⬅️ Vehículo " + logicalVehicle.getId() + " completó giro a la IZQUIERDA desde norte");
+            log("➡️ Vehículo " + logicalVehicle.getId() + " completó giro a la DERECHA desde norte");
         });
-        
-        leftTurnTransition.play();
+
+        rightTurnTransition.play();
         
         // Log detallado de la trayectoria
         log("📍 Giro Izquierda Norte: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
@@ -800,11 +801,11 @@ public class IntersectionView extends BorderPane {
         double startY = CENTER - QUARTER_ROAD_WIDTH;
         
         // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la izquierda, luego vertical hacia abajo ===
-        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro
+        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro
         double midY = CENTER - QUARTER_ROAD_WIDTH;  // Mantener Y
         
         // === PUNTO FINAL: Salir hacia el sur (derecha desde este) ===
-        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril derecho del sur
+        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril derecho del sur
         double finalY = SIZE;                        // Salida por el sur
         
         // Crear path angular con líneas rectas
@@ -845,11 +846,11 @@ public class IntersectionView extends BorderPane {
         double startY = CENTER - QUARTER_ROAD_WIDTH;
         
         // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la izquierda, luego vertical hacia arriba ===
-        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la izquierda)
+        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la izquierda)
         double midY = CENTER - QUARTER_ROAD_WIDTH;  // Mantener Y
         
         // === PUNTO FINAL: Salir hacia el norte (izquierda desde este) ===
-        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril izquierdo del norte
+        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril izquierdo del norte
         double finalY = 0;                           // Salida por el norte
         
         // Crear path angular con líneas rectas
@@ -926,11 +927,11 @@ public class IntersectionView extends BorderPane {
         double startY = CENTER + QUARTER_ROAD_WIDTH;
         
         // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la derecha, luego vertical hacia arriba ===
-        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro
+        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro
         double midY = CENTER + QUARTER_ROAD_WIDTH;  // Mantener Y
         
         // === PUNTO FINAL: Salir hacia el norte (derecha desde oeste) ===
-        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril derecho del norte
+        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril derecho del norte
         double finalY = 0;                           // Salida por el norte
         
         // Crear path angular con líneas rectas
@@ -971,11 +972,11 @@ public class IntersectionView extends BorderPane {
         double startY = CENTER + QUARTER_ROAD_WIDTH;
         
         // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la derecha, luego vertical hacia abajo ===
-        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la derecha)
+        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la derecha)
         double midY = CENTER + QUARTER_ROAD_WIDTH;  // Mantener Y
         
         // === PUNTO FINAL: Salir hacia el sur (izquierda desde oeste) ===
-        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril izquierdo del sur
+        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril izquierdo del sur
         double finalY = SIZE;                        // Salida por el sur
         
         // Crear path angular con líneas rectas
@@ -1040,6 +1041,7 @@ public class IntersectionView extends BorderPane {
         // Log detallado de la trayectoria
         log("📍 Movimiento Directo Oeste: (" + (int)startX + "," + (int)startY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
+
 
     /**
      * Movimiento simple para otros casos (por ahora)
