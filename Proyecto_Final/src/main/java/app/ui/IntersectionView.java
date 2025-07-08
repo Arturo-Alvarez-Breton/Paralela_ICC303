@@ -791,7 +791,7 @@ public class IntersectionView extends BorderPane {
     }
 
     // ========== MOVIMIENTOS DESDE EL ESTE ==========
-    
+
     /**
      * Ejecuta un giro a la derecha desde el este usando movimiento angular
      */
@@ -799,40 +799,40 @@ public class IntersectionView extends BorderPane {
         // Posición actual: línea de parada del este
         double startX = CENTER + HALF_ROAD_WIDTH;
         double startY = CENTER - QUARTER_ROAD_WIDTH;
-        
-        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la izquierda, luego vertical hacia abajo ===
-        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro
+
+        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la izquierda, luego vertical hacia arriba ===
+        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la izquierda)
         double midY = CENTER - QUARTER_ROAD_WIDTH;  // Mantener Y
-        
-        // === PUNTO FINAL: Salir hacia el sur (derecha desde este) ===
-        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril derecho del sur
-        double finalY = SIZE;                        // Salida por el sur
-        
+
+        // === PUNTO FINAL: Salir hacia el norte (izquierda desde este) ===
+        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril izquierdo del norte
+        double finalY = 0;                           // Salida por el norte
+
         // Crear path angular con líneas rectas
         Path rightTurnPath = new Path();
         rightTurnPath.getElements().add(new MoveTo(startX, startY));
-        
+
         // MOVIMIENTO 1: Línea horizontal hacia el centro (ajustar anchura)
         LineTo horizontalMove = new LineTo(midX, midY);
-        
-        // MOVIMIENTO 2: Línea vertical hacia ABAJO (sur)
+
+        // MOVIMIENTO 2: Línea vertical hacia ARRIBA (norte)
         LineTo verticalMove = new LineTo(finalX, finalY);
-        
+
         rightTurnPath.getElements().addAll(horizontalMove, verticalMove);
-        
+
         // Animación del giro a la derecha (3 segundos)
         PathTransition rightTurnTransition = new PathTransition(Duration.seconds(3), rightTurnPath, vehicle);
         rightTurnTransition.setCycleCount(1);
-        
+
         rightTurnTransition.setOnFinished(e -> {
             logicalVehicle.setInIntersection(false);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(startX, startY, finalX, finalY);
             log("➡️ Vehículo " + logicalVehicle.getId() + " completó giro a la DERECHA desde este");
         });
-        
+
         rightTurnTransition.play();
-        
+
         // Log detallado de la trayectoria
         log("📍 Giro Derecha Este: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
@@ -844,43 +844,44 @@ public class IntersectionView extends BorderPane {
         // Posición actual: línea de parada del este
         double startX = CENTER + HALF_ROAD_WIDTH;
         double startY = CENTER - QUARTER_ROAD_WIDTH;
-        
-        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la izquierda, luego vertical hacia arriba ===
-        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la izquierda)
+
+        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la izquierda, luego vertical hacia abajo ===
+        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro
         double midY = CENTER - QUARTER_ROAD_WIDTH;  // Mantener Y
-        
-        // === PUNTO FINAL: Salir hacia el norte (izquierda desde este) ===
-        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril izquierdo del norte
-        double finalY = 0;                           // Salida por el norte
-        
+
+        // === PUNTO FINAL: Salir hacia el sur (derecha desde este) ===
+        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril derecho del sur
+        double finalY = SIZE;                        // Salida por el sur
+
         // Crear path angular con líneas rectas
         Path leftTurnPath = new Path();
         leftTurnPath.getElements().add(new MoveTo(startX, startY));
-        
+
         // MOVIMIENTO 1: Línea horizontal hacia el centro (ajustar anchura)
         LineTo horizontalMove = new LineTo(midX, midY);
-        
-        // MOVIMIENTO 2: Línea vertical hacia ARRIBA (norte)
+
+        // MOVIMIENTO 2: Línea vertical hacia ABAJO (sur)
         LineTo verticalMove = new LineTo(finalX, finalY);
-        
+
         leftTurnPath.getElements().addAll(horizontalMove, verticalMove);
-        
+
         // Animación del giro a la izquierda (3 segundos)
         PathTransition leftTurnTransition = new PathTransition(Duration.seconds(3), leftTurnPath, vehicle);
         leftTurnTransition.setCycleCount(1);
-        
+
         leftTurnTransition.setOnFinished(e -> {
             logicalVehicle.setInIntersection(false);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(startX, startY, finalX, finalY);
             log("⬅️ Vehículo " + logicalVehicle.getId() + " completó giro a la IZQUIERDA desde este");
         });
-        
+
         leftTurnTransition.play();
-        
+
         // Log detallado de la trayectoria
         log("📍 Giro Izquierda Este: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
+
 
     /**
      * Ejecuta un movimiento directo (recto) desde el este hacia el oeste
@@ -917,7 +918,7 @@ public class IntersectionView extends BorderPane {
     }
 
     // ========== MOVIMIENTOS DESDE EL OESTE ==========
-    
+
     /**
      * Ejecuta un giro a la derecha desde el oeste usando movimiento angular
      */
@@ -925,40 +926,40 @@ public class IntersectionView extends BorderPane {
         // Posición actual: línea de parada del oeste
         double startX = CENTER - HALF_ROAD_WIDTH;
         double startY = CENTER + QUARTER_ROAD_WIDTH;
-        
-        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la derecha, luego vertical hacia arriba ===
-        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro
+
+        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la derecha, luego vertical hacia abajo ===
+        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la derecha)
         double midY = CENTER + QUARTER_ROAD_WIDTH;  // Mantener Y
-        
-        // === PUNTO FINAL: Salir hacia el norte (derecha desde oeste) ===
-        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril derecho del norte
-        double finalY = 0;                           // Salida por el norte
-        
+
+        // === PUNTO FINAL: Salir hacia el sur (izquierda desde oeste) ===
+        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril izquierdo del sur
+        double finalY = SIZE;                        // Salida por el sur
+
         // Crear path angular con líneas rectas
         Path rightTurnPath = new Path();
         rightTurnPath.getElements().add(new MoveTo(startX, startY));
-        
+
         // MOVIMIENTO 1: Línea horizontal hacia el centro (ajustar anchura)
         LineTo horizontalMove = new LineTo(midX, midY);
-        
-        // MOVIMIENTO 2: Línea vertical hacia ARRIBA (norte)
+
+        // MOVIMIENTO 2: Línea vertical hacia ABAJO (sur)
         LineTo verticalMove = new LineTo(finalX, finalY);
-        
+
         rightTurnPath.getElements().addAll(horizontalMove, verticalMove);
-        
+
         // Animación del giro a la derecha (3 segundos)
         PathTransition rightTurnTransition = new PathTransition(Duration.seconds(3), rightTurnPath, vehicle);
         rightTurnTransition.setCycleCount(1);
-        
+
         rightTurnTransition.setOnFinished(e -> {
             logicalVehicle.setInIntersection(false);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(startX, startY, finalX, finalY);
             log("➡️ Vehículo " + logicalVehicle.getId() + " completó giro a la DERECHA desde oeste");
         });
-        
+
         rightTurnTransition.play();
-        
+
         // Log detallado de la trayectoria
         log("📍 Giro Derecha Oeste: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
@@ -970,40 +971,40 @@ public class IntersectionView extends BorderPane {
         // Posición actual: línea de parada del oeste
         double startX = CENTER - HALF_ROAD_WIDTH;
         double startY = CENTER + QUARTER_ROAD_WIDTH;
-        
-        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la derecha, luego vertical hacia abajo ===
-        double midX = CENTER - QUARTER_ROAD_WIDTH;  // Nivel de giro (más a la derecha)
+
+        // === PUNTO INTERMEDIO: Moverse horizontalmente hacia la derecha, luego vertical hacia arriba ===
+        double midX = CENTER + QUARTER_ROAD_WIDTH;  // Nivel de giro
         double midY = CENTER + QUARTER_ROAD_WIDTH;  // Mantener Y
-        
-        // === PUNTO FINAL: Salir hacia el sur (izquierda desde oeste) ===
-        double finalX = CENTER - QUARTER_ROAD_WIDTH; // Carril izquierdo del sur
-        double finalY = SIZE;                        // Salida por el sur
-        
+
+        // === PUNTO FINAL: Salir hacia el norte (derecha desde oeste) ===
+        double finalX = CENTER + QUARTER_ROAD_WIDTH; // Carril derecho del norte
+        double finalY = 0;                           // Salida por el norte
+
         // Crear path angular con líneas rectas
         Path leftTurnPath = new Path();
         leftTurnPath.getElements().add(new MoveTo(startX, startY));
-        
+
         // MOVIMIENTO 1: Línea horizontal hacia el centro (ajustar anchura)
         LineTo horizontalMove = new LineTo(midX, midY);
-        
-        // MOVIMIENTO 2: Línea vertical hacia ABAJO (sur)
+
+        // MOVIMIENTO 2: Línea vertical hacia ARRIBA (norte)
         LineTo verticalMove = new LineTo(finalX, finalY);
-        
+
         leftTurnPath.getElements().addAll(horizontalMove, verticalMove);
-        
+
         // Animación del giro a la izquierda (3 segundos)
         PathTransition leftTurnTransition = new PathTransition(Duration.seconds(3), leftTurnPath, vehicle);
         leftTurnTransition.setCycleCount(1);
-        
+
         leftTurnTransition.setOnFinished(e -> {
             logicalVehicle.setInIntersection(false);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(startX, startY, finalX, finalY);
             log("⬅️ Vehículo " + logicalVehicle.getId() + " completó giro a la IZQUIERDA desde oeste");
         });
-        
+
         leftTurnTransition.play();
-        
+
         // Log detallado de la trayectoria
         log("📍 Giro Izquierda Oeste: (" + (int)startX + "," + (int)startY + ") → (" + (int)midX + "," + (int)midY + ") → (" + (int)finalX + "," + (int)finalY + ")");
     }
