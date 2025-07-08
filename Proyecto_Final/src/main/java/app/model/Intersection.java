@@ -26,11 +26,11 @@ public class Intersection {
             return Long.compare(v1.getArrivalOrder(), v2.getArrivalOrder());
         });
     }
-
+    // Devuelve y remueve el siguiente vehiculo segun su prioridad
     public Vehicle getNextVehicle() {
         return vehicleQueue.poll();
     }
-
+    // inserta un vehiculo en la cola
     public void addVehicle(Vehicle logicalVehicle) {
         vehicleQueue.offer(logicalVehicle);
     }
