@@ -133,16 +133,16 @@ public class IntersectionView extends BorderPane {
 
     private void drawStopSigns() {
         StopSignView northStop = new StopSignView(CENTER - CAR_OFFSET + STOP_SIGN_OFFSET,
-                                                    CENTER - CAR_OFFSET - STOP_SIGN_OFFSET);
+                CENTER - CAR_OFFSET - STOP_SIGN_OFFSET);
 
         StopSignView southStop = new StopSignView(CENTER + CAR_OFFSET - STOP_SIGN_OFFSET,
-                                                    CENTER + CAR_OFFSET + STOP_SIGN_OFFSET);
+                CENTER + CAR_OFFSET + STOP_SIGN_OFFSET);
 
         StopSignView eastStop = new StopSignView(CENTER + CAR_OFFSET + STOP_SIGN_OFFSET,
-                                                    CENTER - CAR_OFFSET + STOP_SIGN_OFFSET);
+                CENTER - CAR_OFFSET + STOP_SIGN_OFFSET);
 
         StopSignView westStop = new StopSignView(CENTER - CAR_OFFSET - STOP_SIGN_OFFSET,
-                                                    CENTER + CAR_OFFSET - STOP_SIGN_OFFSET);
+                CENTER + CAR_OFFSET - STOP_SIGN_OFFSET);
 
         intersectionPane.getChildren().addAll(northStop, southStop, eastStop, westStop);
     }
@@ -154,9 +154,6 @@ public class IntersectionView extends BorderPane {
         });
     }
 
-    /**
-     * Crea un vehículo en el borde especificado y lo anima hacia el centro.
-     */
     /**
      * Crea un vehículo en el borde especificado y lo anima hacia el centro.
      * Ahora acepta tipo y muestra feedback visual.
@@ -217,7 +214,7 @@ public class IntersectionView extends BorderPane {
         javafx.animation.PathTransition transition = new javafx.animation.PathTransition(Duration.seconds(3), path, vehicle);
         transition.setCycleCount(1);
         transition.setOnFinished(e -> {
-            logicalVehicle.setInTersection(true);
+            logicalVehicle.setInIntersection(true);
             intersectionPane.getChildren().remove(vehicle);
             showLaneFeedback(fxStartX, fxStartY, fxEndX, fxEndY);
             log("Vehículo " + logicalVehicle.getId() + " (" + logicalVehicle.getType() + ") cruzó (" + turn + ")");
