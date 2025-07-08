@@ -4,6 +4,7 @@ import app.enums.DirectionEnum;
 import app.model.Intersection;
 import app.enums.VehicleTypeEnum;
 
+import app.model.Movement;
 import app.model.Vehicle;
 import javafx.animation.PathTransition;
 import javafx.application.Platform;
@@ -31,7 +32,7 @@ public class IntersectionView extends BorderPane {
     private static final int HALF_ROAD_WIDTH = ROAD_WIDTH / 2;
     private static final int QUARTER_ROAD_WIDTH = HALF_ROAD_WIDTH / 2;
     private static final double LINE_WIDTH = SIZE * 0.008;
-    private static final double LINE_LENGTH = SIZE * 0.08;
+    private static final double LINE_LENGTH = SIZE * 0.02;
 
     private static final double CENTER = SIZE / 2.0;
     private static final double CAR_OFFSET = ROAD_WIDTH / 2.0;
@@ -58,6 +59,7 @@ public class IntersectionView extends BorderPane {
     public IntersectionView() {
         this.logicalIntersection = new Intersection("case-1", true);
 
+
         intersectionPane = new Pane();
         drawBackground();
         drawRoads();
@@ -79,7 +81,9 @@ public class IntersectionView extends BorderPane {
         logArea.setWrapText(true);
 
         Label normalLabel = new Label("Vehículos normales");
+        normalLabel.setTextFill(Color.WHITE);
         Label emergencyLabel = new Label("Vehículos de emergencia");
+        emergencyLabel.setTextFill(Color.WHITE);
 
         VBox rightBox = new VBox(
                 10,
@@ -161,7 +165,9 @@ public class IntersectionView extends BorderPane {
      * Crea un vehículo en el borde especificado y lo anima hacia el centro.
      * Ahora acepta tipo y muestra feedback visual.
      */
-    private void addVehicleFrom(String entryPoint, DirectionEnum turn, VehicleTypeEnum type) {
+    private void addVehicleFrom(String entryPoint,
+                                DirectionEnum turn,
+                                VehicleTypeEnum type) {
         Color fillColor, strokeColor;
         double startX = CENTER, startY = CENTER, endX = CENTER, endY = CENTER;
 
@@ -204,8 +210,12 @@ public class IntersectionView extends BorderPane {
         }
 
         String vehicleId = "v" + (vehicleCounter++);
-
-        Vehicle logicalVehicle = new Vehicle(vehicleId, type, turn);
+        Movement.Entry entryEnum = Movement.Entry.valueOf(entryPoint.toUpperCase());
+        
+        // Crear el vehículo lógico
+        Vehicle logicalVehicle = new Vehicle(vehicleId, type, turn, entryEnum);
+        
+        // Agregar el vehículo a la intersección
         logicalIntersection.addVehicle(logicalVehicle);
 
         VehicleView vehicle = new VehicleView(startX, startY, fillColor, strokeColor, type, turn, entryPoint);
@@ -261,6 +271,8 @@ public class IntersectionView extends BorderPane {
         // TODO: Asignar color de stroke en base a la direccion a la que se dirige el carro
         return null;
     }
+
+
 
     private GridPane createControlGrid(VehicleTypeEnum type) {
         String[] cardinals = {"Norte", "Este", "Sur", "Oeste"};

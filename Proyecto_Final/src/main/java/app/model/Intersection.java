@@ -2,6 +2,8 @@ package app.model;
 
 import app.enums.VehicleTypeEnum;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.PriorityBlockingQueue;
 
 public class Intersection {
@@ -33,5 +35,20 @@ public class Intersection {
     // inserta un vehiculo en la cola
     public void addVehicle(Vehicle logicalVehicle) {
         vehicleQueue.offer(logicalVehicle);
+    }
+
+    // Devuelve una vista de la cola sin vaciarla
+    public List<Vehicle> peekAllVehicles() {
+        return new ArrayList<>(vehicleQueue);
+    }
+
+    // Elimina un vehículo concreto de la cola
+    public boolean removeVehicle(Vehicle v) {
+        return vehicleQueue.remove(v);
+    }
+
+    // Getter para el ID de la intersección
+    public String getId() {
+        return id;
     }
 }
