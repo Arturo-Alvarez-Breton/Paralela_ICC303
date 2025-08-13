@@ -23,12 +23,12 @@ public class LaunchView {
         btnStart.getStyleClass().add("start-btn");
         btnStart.setOnAction(e -> {
             // Cuando pulso, cargo la escena de la intersección
-//            IntersectionView intersection = new IntersectionView();
-//            Scene intersectionScene = new Scene(intersection, WIDTH, HEIGHT);
-//            intersectionScene.getStylesheets().add(
-//                    getClass().getResource("/css//launchView.css").toExternalForm()
-//            );
-//            primaryStage.setScene(intersectionScene);
+            IntersectionView intersection = new IntersectionView();
+            Scene intersectionScene = new Scene(intersection, WIDTH, HEIGHT);
+            intersectionScene.getStylesheets().add(
+                    getClass().getResource("/css//launchView.css").toExternalForm()
+            );
+            primaryStage.setScene(intersectionScene);
         });
 
         // Contenedor vertical

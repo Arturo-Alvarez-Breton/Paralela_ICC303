@@ -10,7 +10,6 @@ import javafx.scene.Group;
 import javafx.scene.effect.Glow;
 import javafx.scene.shape.Rectangle;
 
-//TODO:  REFACTOR
 public class VehicleView extends Group {
     private static final double RADIUS = 10; // Radio del vehículo
     private Circle circle;

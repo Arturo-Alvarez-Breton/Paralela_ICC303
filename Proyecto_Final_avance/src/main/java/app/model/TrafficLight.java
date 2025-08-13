@@ -6,12 +6,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TrafficLight {
     private String id;
     private AtomicBoolean green;
-    private int timeInterval;
 
     public TrafficLight(String id) {
         this.id = id;
-        this.green = new AtomicBoolean(false);
-        this.timeInterval = 20;
+        this.green = new AtomicBoolean(false); // Default to red light
     }
 
     public void changeLight() {

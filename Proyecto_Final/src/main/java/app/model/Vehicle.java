@@ -5,79 +5,49 @@ import app.enums.VehicleTypeEnum;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Vehicle {
-
-    // Contador global para asignar un orden único a cada vehículo al instanciarlo
-    private static final AtomicLong COUNTER = new AtomicLong(0);
     private String id;
     private VehicleTypeEnum type;
     private DirectionEnum direction;
-    private boolean inIntersection;
-    private boolean readyToCross;  // Indica si el vehículo está en posición para cruzar
-    // se coloca final porque no se va a cambiar el arrival order en el programa una vez el carro es introducido solo debe tener 1 unico valor en arrival order
-    private final long arrivalOrder;
-    private final Movement.Entry entryPoint;
+    private static final AtomicLong counter = new AtomicLong(0);
+    private long creationTime;
+    private long entryTime;
+    private long exitTime;
 
-    public Vehicle(String id,
-                   VehicleTypeEnum type,
-                   DirectionEnum direction,
-                   Movement.Entry entryPoint) {
-        this.arrivalOrder   = COUNTER.getAndIncrement();
-        this.id             = id;
-        this.type           = type;
-        this.direction      = direction;
-        this.entryPoint     = entryPoint;
-        this.inIntersection = false;
-        this.readyToCross   = false;  // Inicialmente no está listo para cruzar
+    public Vehicle(VehicleTypeEnum type, DirectionEnum direction) {
+        this.id = "V" + counter.incrementAndGet();
+        this.type = type;
+        this.direction = direction;
+        this.creationTime = System.currentTimeMillis();
     }
 
     public String getId() {
         return id;
     }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public VehicleTypeEnum getType() {
         return type;
     }
-
-    public void setType(VehicleTypeEnum type) {
-        this.type = type;
-    }
-
     public DirectionEnum getDirection() {
         return direction;
     }
-
-    public void setDirection(DirectionEnum direction) {
-        this.direction = direction;
+    public long getCreationTime() {
+        return creationTime;
     }
-
-    public boolean isInIntersection() {
-        return inIntersection;
+    public long getEntryTime() {
+        return entryTime;
     }
-
-    public void setInIntersection(boolean inIntersection) {
-        this.inIntersection = inIntersection;
+    public void setEntryTime(long entryTime) {
+        this.entryTime = entryTime;
     }
-
+    public long getExitTime() {
+        return exitTime;
+    }
+    public void setExitTime(long exitTime) {
+        this.exitTime = exitTime;
+    }
     public long getArrivalOrder() {
-        return arrivalOrder;
+        return creationTime;
     }
 
-    public Movement getMovement() {
-        return new Movement(entryPoint,
-                Movement.Turn.valueOf(direction.name()));
-    }
-
-    public boolean isReadyToCross() {
-        return readyToCross;
-    }
-    
-    public void setReadyToCross(boolean readyToCross) {
-        this.readyToCross = readyToCross;
-    }
 }
 
 
