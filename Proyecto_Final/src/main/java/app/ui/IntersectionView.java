@@ -1,0 +1,386 @@
+package app.ui;
+
+import app.controller.ScenarioController;
+import app.model.Street;
+import app.model.Intersection;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.Circle;
+import javafx.scene.text.Text;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+
+import java.util.List;
+
+/**
+ * Vista visual para mostrar el Escenario 1 con 8 calles (carriles de entrada y salida)
+ */
+public class IntersectionView extends Pane {
+
+    private final ScenarioController scenarioController;
+    private static final Color STREET_COLOR = Color.DARKGRAY;
+    private static final Color INTERSECTION_COLOR = Color.LIGHTGRAY;
+    private static final Color STREET_BORDER_COLOR = Color.WHITE;
+    private static final Color LANE_DIVIDER_COLOR = Color.YELLOW;
+
+    public IntersectionView() {
+        this.scenarioController = new ScenarioController();
+        initializeScenario();
+        drawScenario();
+    }
+
+    /**
+     * Inicializa el escenario 1
+     */
+    private void initializeScenario() {
+        scenarioController.initializeScenario1();
+    }
+
+    /**
+     * Dibuja toda la escena del escenario
+     */
+    private void drawScenario() {
+        // Limpiar la vista
+        this.getChildren().clear();
+
+        // Dibujar fondo
+        drawBackground();
+
+        // Dibujar todas las calles
+        drawAllStreets();
+
+        // Dibujar intersección central
+        drawCentralIntersection();
+
+        // Agregar título e información
+        addTitle();
+
+        // Agregar botón de regreso
+        addBackButton();
+    }
+
+    /**
+     * Dibuja el fondo de la simulación
+     */
+    private void drawBackground() {
+        Rectangle background = new Rectangle(0, 0, LaunchView.WIDTH, LaunchView.HEIGHT);
+        background.setFill(Color.DARKGREEN);
+        this.getChildren().add(background);
+    }
+
+    /**
+     * Dibuja todas las calles del escenario con estructura realista
+     */
+    private void drawAllStreets() {
+        List<Street> streets = scenarioController.getAllStreets();
+
+        System.out.println("=== DIBUJANDO CALLES ===");
+        System.out.println("Total calles a dibujar: " + streets.size());
+
+        // Dibujar cada calle individualmente y verificar que todas se dibujen
+        for (Street street : streets) {
+            System.out.printf("Dibujando: %s en (%d,%d) tamaño %dx%d%n",
+                street.getId(), street.getPosX(), street.getPosY(),
+                street.getWidth(), street.getHeight());
+
+            drawIndividualStreet(street);
+            addStreetDirectionLabel(street);
+        }
+
+        // Dibujar líneas divisorias amarillas entre carriles
+        drawCentralDividers();
+    }
+
+    /**
+     * Extrae y normaliza la dirección desde el id de la calle.
+     * Soporta tokens en español y en inglés, devolviendo: north, south, east o west
+     */
+    private String parseDirectionFromId(String id) {
+        String[] tokens = id.split("_");
+        for (String t : tokens) {
+            String token = t.toLowerCase();
+            switch (token) {
+                case "north":
+                case "norte":
+                    return "north";
+                case "south":
+                case "sur":
+                    return "south";
+                case "east":
+                case "este":
+                    return "east";
+                case "west":
+                case "oeste":
+                    return "west";
+                default:
+                    // continue
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Dibuja las calles Norte-Sur con sus carriles correspondientes
+     */
+    private void drawNorthSouthStreets(List<Street> streets) {
+        for (Street street : streets) {
+            String dir = parseDirectionFromId(street.getId());
+            if ("north".equals(dir) || "south".equals(dir)) {
+                drawIndividualStreet(street);
+                addStreetDirectionLabel(street);
+            }
+        }
+    }
+
+    /**
+     * Dibuja las calles Este-Oeste con sus carriles correspondientes
+     */
+    private void drawEastWestStreets(List<Street> streets) {
+        for (Street street : streets) {
+            String dir = parseDirectionFromId(street.getId());
+            if ("east".equals(dir) || "west".equals(dir)) {
+                drawIndividualStreet(street);
+                addStreetDirectionLabel(street);
+            }
+        }
+    }
+
+    /**
+     * Dibuja una calle individual como rectángulo
+     */
+    private void drawIndividualStreet(Street street) {
+        Rectangle streetRect = new Rectangle(
+            street.getPosX(),
+            street.getPosY(),
+            street.getWidth(),
+            street.getHeight()
+        );
+
+        streetRect.setFill(STREET_COLOR);
+        streetRect.setStroke(STREET_BORDER_COLOR);
+        streetRect.setStrokeWidth(1);
+
+        this.getChildren().add(streetRect);
+    }
+
+    /**
+     * Dibuja las líneas divisorias amarillas centrales entre carriles opuestos
+     */
+    private void drawCentralDividers() {
+        int centerX = app.service.StreetService.INTERSECTION_CENTER_X;
+        int centerY = app.service.StreetService.INTERSECTION_CENTER_Y;
+        int intersectionSize = 80;
+        int streetLength = 200;
+
+        // Línea divisoria vertical Norte-Sur (entre carriles de entrada y salida)
+        Rectangle verticalDivider = new Rectangle(
+            centerX - 1, // Centro entre los carriles
+            centerY - intersectionSize/2 - streetLength, // Desde arriba
+            2, // Ancho de la línea
+            streetLength * 2 + intersectionSize // Altura total
+        );
+        verticalDivider.setFill(LANE_DIVIDER_COLOR);
+        this.getChildren().add(verticalDivider);
+
+        // Línea divisoria horizontal Este-Oeste (entre carriles de entrada y salida)
+        Rectangle horizontalDivider = new Rectangle(
+            centerX - intersectionSize/2 - streetLength, // Desde la izquierda
+            centerY - 1, // Centro entre los carriles
+            streetLength * 2 + intersectionSize, // Ancho total
+            2 // Alto de la línea
+        );
+        horizontalDivider.setFill(LANE_DIVIDER_COLOR);
+        this.getChildren().add(horizontalDivider);
+    }
+
+    /**
+     * Agrega etiquetas direccionales para cada calle
+     */
+    private void addStreetDirectionLabel(Street street) {
+        String label = getStreetLabel(street);
+        Color labelColor = getStreetLabelColor(street);
+
+        Text streetText = new Text(label);
+        streetText.setFill(labelColor);
+        streetText.setFont(Font.font("Arial", FontWeight.BOLD, 10));
+
+        // Posicionar etiqueta según el tipo de calle
+        positionStreetLabel(streetText, street);
+
+        this.getChildren().add(streetText);
+    }
+
+    /**
+     * Obtiene la etiqueta apropiada para cada calle
+     */
+    private String getStreetLabel(Street street) {
+        String id = street.getId();
+        String dir = parseDirectionFromId(id);
+        boolean entrada = id.contains("entrada");
+        boolean salida = id.contains("salida");
+
+        if (entrada || salida) {
+            switch (dir) {
+                case "north": return "↑ NORTH";
+                case "south": return "↓ SOUTH";
+                case "east":  return "→ EAST";
+                case "west":  return "← WEST";
+                default: break;
+            }
+        }
+        return "STREET";
+    }
+
+    /**
+     * Obtiene el color apropiado para cada etiqueta
+     */
+    private Color getStreetLabelColor(Street street) {
+        return street.getId().contains("entrada") ? Color.LIGHTBLUE : Color.LIGHTCORAL;
+    }
+
+    /**
+     * Posiciona las etiquetas según la orientación de la calle
+     */
+    private void positionStreetLabel(Text label, Street street) {
+        double x = street.getPosX() + street.getWidth() / 2 - 20;
+        double y = street.getPosY() + street.getHeight() / 2;
+
+        String dir = parseDirectionFromId(street.getId());
+        if ("north".equals(dir) || "south".equals(dir)) {
+            y += 15; // Centrar verticalmente en calles verticales
+        } else if ("east".equals(dir) || "west".equals(dir)) {
+            x -= 10; // Ajustar horizontalmente en calles horizontales
+            y += 5;
+        }
+
+        label.setX(x);
+        label.setY(y);
+    }
+
+    /**
+     * Dibuja la intersección central
+     */
+    private void drawCentralIntersection() {
+        int centerX = app.service.StreetService.INTERSECTION_CENTER_X;
+        int centerY = app.service.StreetService.INTERSECTION_CENTER_Y;
+        int intersectionSize = 80;
+
+        Rectangle intersection = new Rectangle(
+            centerX - intersectionSize / 2,
+            centerY - intersectionSize / 2,
+            intersectionSize,
+            intersectionSize
+        );
+
+        intersection.setFill(INTERSECTION_COLOR);
+        intersection.setStroke(STREET_BORDER_COLOR);
+        intersection.setStrokeWidth(3);
+
+        this.getChildren().add(intersection);
+
+        // Círculo central para marcar el centro de la intersección
+        Circle centralCircle = new Circle(centerX, centerY, 12);
+        centralCircle.setFill(Color.ORANGE);
+        centralCircle.setStroke(Color.DARKORANGE);
+        centralCircle.setStrokeWidth(2);
+
+        this.getChildren().add(centralCircle);
+
+        // Texto de intersección central
+        Text intersectionText = new Text(centerX - 25, centerY + 5, "CRUCE");
+        intersectionText.setFill(Color.DARKBLUE);
+        intersectionText.setFont(Font.font("Arial", FontWeight.BOLD, 10));
+
+        this.getChildren().add(intersectionText);
+    }
+
+    /**
+     * Agrega el título del escenario e información
+     */
+    private void addTitle() {
+        Text title = new Text(50, 50, "Escenario 1: Intersección de 4 Vías - 8 Carriles");
+        title.setFill(Color.WHITE);
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 22));
+
+        this.getChildren().add(title);
+
+        // Información detallada
+        Text info = new Text(50, 80, String.format(
+            "Calles: %d | Intersecciones: %d | Carriles de Entrada: 4 | Carriles de Salida: 4",
+            scenarioController.getStreetCount(),
+            scenarioController.getIntersectionCount()
+        ));
+        info.setFill(Color.LIGHTGRAY);
+        info.setFont(Font.font("Arial", FontWeight.NORMAL, 14));
+
+        this.getChildren().add(info);
+
+        // Leyenda de colores
+        addColorLegend();
+    }
+
+    /**
+     * Agrega una leyenda de colores para explicar la visualización
+     */
+    private void addColorLegend() {
+        int startY = 120;
+
+        // Entrada
+        Rectangle entryRect = new Rectangle(50, startY, 15, 15);
+        entryRect.setFill(Color.LIGHTBLUE);
+        this.getChildren().add(entryRect);
+
+        Text entryText = new Text(75, startY + 12, "Carriles de Entrada");
+        entryText.setFill(Color.WHITE);
+        entryText.setFont(Font.font("Arial", FontWeight.NORMAL, 12));
+        this.getChildren().add(entryText);
+
+        // Salida
+        Rectangle exitRect = new Rectangle(250, startY, 15, 15);
+        exitRect.setFill(Color.LIGHTCORAL);
+        this.getChildren().add(exitRect);
+
+        Text exitText = new Text(275, startY + 12, "Carriles de Salida");
+        exitText.setFill(Color.WHITE);
+        exitText.setFont(Font.font("Arial", FontWeight.NORMAL, 12));
+        this.getChildren().add(exitText);
+
+        // Líneas divisorias
+        Rectangle dividerRect = new Rectangle(450, startY, 15, 15);
+        dividerRect.setFill(LANE_DIVIDER_COLOR);
+        this.getChildren().add(dividerRect);
+
+        Text dividerText = new Text(475, startY + 12, "Líneas Divisorias");
+        dividerText.setFill(Color.WHITE);
+        dividerText.setFont(Font.font("Arial", FontWeight.NORMAL, 12));
+        this.getChildren().add(dividerText);
+    }
+
+    /**
+     * Agrega un botón para regresar al menú principal
+     */
+    private void addBackButton() {
+        javafx.scene.control.Button backButton = new javafx.scene.control.Button("← Volver al Menú");
+        backButton.setLayoutX(50);
+        backButton.setLayoutY(LaunchView.HEIGHT - 80);
+        backButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; " +
+                           "-fx-font-size: 16px; -fx-padding: 10 20 10 20; -fx-background-radius: 5;");
+
+        backButton.setOnAction(e -> {
+            // Obtener el Stage actual desde la escena
+            javafx.stage.Stage stage = (javafx.stage.Stage) this.getScene().getWindow();
+            LaunchView launchView = new LaunchView();
+            stage.setScene(launchView.createLaunchScene(stage));
+        });
+
+        this.getChildren().add(backButton);
+    }
+
+    /**
+     * Obtiene el controlador de escenario para uso externo
+     */
+    public ScenarioController getScenarioController() {
+        return scenarioController;
+    }
+}

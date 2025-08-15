@@ -1,4 +1,4 @@
-package app.enums;
+package app.model.enums;
 
 public enum DirectionEnum {
     RIGHT,

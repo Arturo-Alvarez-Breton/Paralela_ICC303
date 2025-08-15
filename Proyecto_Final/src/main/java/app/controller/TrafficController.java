@@ -1,7 +1,6 @@
 package app.controller;
 
 import app.model.Intersection;
-import app.model.OccupiedLane;
 import app.model.TrafficLight;
 import app.model.Vehicle;
 

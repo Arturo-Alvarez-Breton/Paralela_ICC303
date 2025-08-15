@@ -1,7 +1,7 @@
 package app.ui;
 
-import app.enums.DirectionEnum;
-import app.enums.VehicleTypeEnum;
+import app.model.enums.DirectionEnum;
+import app.model.enums.VehicleTypeEnum;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;

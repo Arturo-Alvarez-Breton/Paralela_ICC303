@@ -1,6 +1,6 @@
 package app.model;
 
-import app.enums.VehicleTypeEnum;
+import app.model.enums.VehicleTypeEnum;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,5 +47,10 @@ public class Intersection {
     // Getter para el ID de la intersección
     public String getId() {
         return id;
+    }
+
+    // Getter para verificar si el giro a la derecha está permitido
+    public boolean isRightTurnAllowed() {
+        return rightTurnAllowed;
     }
 }
