@@ -11,6 +11,12 @@ public class Intersection {
     boolean rightTurnAllowed;
     private PriorityBlockingQueue<Vehicle> vehicleQueue;
 
+    // Visual/geometry info for UI rendering (optional)
+    private int posX;    // top-left X
+    private int posY;    // top-left Y
+    private int width;
+    private int height;
+
     public Intersection(String id, boolean rightTurnAllowed) {
         this.id = id;
         this.rightTurnAllowed = rightTurnAllowed;
@@ -52,5 +58,18 @@ public class Intersection {
     // Getter para verificar si el giro a la derecha está permitido
     public boolean isRightTurnAllowed() {
         return rightTurnAllowed;
+    }
+
+    // Geometry getters/setters for UI layout
+    public int getPosX() { return posX; }
+    public int getPosY() { return posY; }
+    public int getWidth() { return width; }
+    public int getHeight() { return height; }
+
+    public void setBounds(int x, int y, int width, int height) {
+        this.posX = x;
+        this.posY = y;
+        this.width = width;
+        this.height = height;
     }
 }

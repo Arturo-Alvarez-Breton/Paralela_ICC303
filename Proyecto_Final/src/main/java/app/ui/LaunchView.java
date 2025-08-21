@@ -18,12 +18,11 @@ public class LaunchView {
         // se aplican los estilos del titulo
         title.getStyleClass().add("title");
 
-        // Botón Iniciar y asignacion de estilos al mismo
-        Button btnStart = new Button("Iniciar Escenario 1");
-        btnStart.getStyleClass().add("start-btn");
-        btnStart.setOnAction(e -> {
-            // Cuando pulso, cargo la escena de la intersección
-            IntersectionView intersection = new IntersectionView();
+        // Botón Iniciar Escenario 1
+        Button btnStart1 = new Button("Iniciar Escenario 1");
+        btnStart1.getStyleClass().add("start-btn");
+        btnStart1.setOnAction(e -> {
+            IntersectionView intersection = new IntersectionView(1);
             Scene intersectionScene = new Scene(intersection, WIDTH, HEIGHT);
             intersectionScene.getStylesheets().add(
                     getClass().getResource("/css/launchView.css").toExternalForm()
@@ -31,8 +30,20 @@ public class LaunchView {
             primaryStage.setScene(intersectionScene);
         });
 
+        // Botón Iniciar Escenario 2 (Autopista)
+        Button btnStart2 = new Button("Iniciar Escenario 2 (Autopista)");
+        btnStart2.getStyleClass().add("start-btn");
+        btnStart2.setOnAction(e -> {
+            IntersectionView highway = new IntersectionView(2);
+            Scene highwayScene = new Scene(highway, WIDTH, HEIGHT);
+            highwayScene.getStylesheets().add(
+                    getClass().getResource("/css/launchView.css").toExternalForm()
+            );
+            primaryStage.setScene(highwayScene);
+        });
+
         // Contenedor vertical
-        VBox root = new VBox(40, title, btnStart);
+        VBox root = new VBox(30, title, btnStart1, btnStart2);
         root.setAlignment(Pos.CENTER);
 
         Scene scene = new Scene(root, WIDTH, HEIGHT);

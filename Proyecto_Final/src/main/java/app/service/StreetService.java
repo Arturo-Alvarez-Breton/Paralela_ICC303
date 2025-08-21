@@ -74,4 +74,28 @@ public class StreetService {
     public List<DirectionEnum> createRestrictedDirections() {
         return Arrays.asList(DirectionEnum.STRAIGHT, DirectionEnum.RIGHT);
     }
+
+    // === Highway lane presets ===
+    /**
+     * Left lane: only LEFT and U_TURN
+     */
+    public List<DirectionEnum> createLeftLaneDirections() {
+        return Arrays.asList(DirectionEnum.LEFT, DirectionEnum.U_TURN);
+    }
+
+    /**
+     * Center lane: only STRAIGHT
+     */
+    public List<DirectionEnum> createCenterLaneDirections() {
+        List<DirectionEnum> dirs = new ArrayList<>();
+        dirs.add(DirectionEnum.STRAIGHT);
+        return dirs;
+    }
+
+    /**
+     * Right lane: STRAIGHT and RIGHT
+     */
+    public List<DirectionEnum> createRightLaneDirections() {
+        return Arrays.asList(DirectionEnum.STRAIGHT, DirectionEnum.RIGHT);
+    }
 }
