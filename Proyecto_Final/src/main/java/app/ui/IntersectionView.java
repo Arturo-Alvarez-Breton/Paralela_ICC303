@@ -482,16 +482,15 @@ public class IntersectionView extends Pane {
     private void addHighwayLaneLabel(Street street) {
         String id = street.getId().toLowerCase();
         String label = null;
-        if (id.startsWith("west_east_left_lane")) label = "W→E Left";
-        else if (id.startsWith("west_east_center_lane")) label = "W→E Center";
-        else if (id.startsWith("west_east_right_lane")) label = "W→E Right";
-        else if (id.startsWith("east_west_left_lane")) label = "E→W Left";
-        else if (id.startsWith("east_west_center_lane")) label = "E→W Center";
-        else if (id.startsWith("east_west_right_lane")) label = "E→W Right";
-        if (label == null) return;
+        if (id.startsWith("west_east_left_lane")) label = "W (L)";
+        else if (id.startsWith("west_east_center_lane")) label = "West (C)";
+        else if (id.startsWith("west_east_right_lane")) label = "West (R)";
+        else if (id.startsWith("east_west_left_lane")) label = "East (L)";
+        else if (id.startsWith("east_west_center_lane")) label = "East (C)";
+        else if (id.startsWith("east_west_right_lane")) label = "East (R)";
 
         Text t = new Text(street.getPosX() + 6, street.getPosY() + 14, label);
-        t.setFill(Color.LIGHTGRAY);
+        t.setFill(Color.WHITE);
         t.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
         this.getChildren().add(t);
     }

@@ -185,9 +185,9 @@ public class ScenarioController {
         builder.addSegments("west_east_right_lane", weRightY, rightDirs);
 
         // East -> West lanes (bottom band)
-        builder.addSegments("east_west_left_lane", ewLeftY, leftDirs);
+        builder.addSegments("east_west_right_lane", ewLeftY, leftDirs);
         builder.addSegments("east_west_center_lane", ewCenterY, centerDirs);
-        builder.addSegments("east_west_right_lane", ewRightY, rightDirs);
+        builder.addSegments("east_west_left_lane", ewRightY, rightDirs);
     }
 
     /**
