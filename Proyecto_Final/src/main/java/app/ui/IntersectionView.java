@@ -434,47 +434,75 @@ public class IntersectionView extends Pane {
     }
 
     private void drawScenario2LaneDividers() {
-        // Usamos el mismo layout que en ScenarioController
-        final int leftMargin = 60;
-        final int rightMargin = LaunchView.WIDTH - 60;
-        final int laneHeight = 28;
-        final int laneGap = 6;
-        final int bandGap = 50;
-        final int topBandY = 220;
+        // Use the same layout constants as in ScenarioController
+        final int sceneWidth = 1280;
+        final int sceneHeight = 720;
+        final int centerX = sceneWidth / 2;
+        final int centerY = sceneHeight / 2;
 
-        int weLeftY = topBandY;
-        int weCenterY = weLeftY + laneHeight + laneGap;
-        int weRightY = weCenterY + laneHeight + laneGap;
+        // Street dimensions matching Scenario 1
+        final int laneHeight = 40; // Same as Scenario 1
+        final int laneGap = 8; // Slightly larger gap for better visibility
+        final int bandGap = 80; // Gap between top and bottom direction bands
+        final int intersectionSize = 80; // Same as Scenario 1
 
-        int ewLeftY = weRightY + laneHeight + bandGap;
+        // Calculate total highway height and center it vertically
+        int totalHighwayHeight = (laneHeight * 3) + (laneGap * 2) + bandGap + (laneHeight * 3) + (laneGap * 2);
+        int topBandY = centerY - (totalHighwayHeight / 2);
+
+        // INTERCAMBIADO: East->West ahora está arriba, West->East abajo
+        int ewLeftY = topBandY;
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        // Get intersection positions to determine where streets exist (now only 4 intersections)
-        int[] intersectionXs = new int[] {leftMargin, 300, 600, 900};
-        int intersectionWidth = 22;
+        int weLeftY = ewRightY + laneHeight + bandGap;
+        int weCenterY = weLeftY + laneHeight + laneGap;
+        int weRightY = weCenterY + laneHeight + laneGap;
 
-        // Only draw lane dividers where there are actual street segments
+        // Center intersections horizontally with proper spacing - matching controller's longer highway
+        int totalRoadLength = 1000; // Increased to match controller
+        int leftMargin = centerX - (totalRoadLength / 2);
+        int intersectionSpacing = totalRoadLength / 3; // Divide into 3 equal segments for 4 intersections
+
+        int[] intersectionXs = new int[] {
+            leftMargin,
+            leftMargin + intersectionSpacing,
+            leftMargin + (intersectionSpacing * 2),
+            leftMargin + totalRoadLength
+        };
+
+        // Draw lane dividers where there are actual street segments
         // Between intersection_1 and intersection_2
-        int segmentStartX = intersectionXs[0] + intersectionWidth / 2 + 6;
-        int segmentEndX = intersectionXs[1] - intersectionWidth / 2 - 6;
-        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+        int segmentStartX = intersectionXs[0] + intersectionSize / 2 + 6;
+        int segmentEndX = intersectionXs[1] - intersectionSize / 2 - 6;
+        // East->West band dividers (top band - INTERCAMBIADO)
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
+        // West->East band dividers (bottom band - INTERCAMBIADO)
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weLeftY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
 
         // Between intersection_2 and intersection_3
-        segmentStartX = intersectionXs[1] + intersectionWidth / 2 + 6;
-        segmentEndX = intersectionXs[2] - intersectionWidth / 2 - 6;
-        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+        segmentStartX = intersectionXs[1] + intersectionSize / 2 + 6;
+        segmentEndX = intersectionXs[2] - intersectionSize / 2 - 6;
+        // East->West band dividers (top band)
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
+        // West->East band dividers (bottom band)
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weLeftY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
 
         // Between intersection_3 and intersection_4
-        segmentStartX = intersectionXs[2] + intersectionWidth / 2 + 6;
-        segmentEndX = intersectionXs[3] - intersectionWidth / 2 - 6;
-        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+        segmentStartX = intersectionXs[2] + intersectionSize / 2 + 6;
+        segmentEndX = intersectionXs[3] - intersectionSize / 2 - 6;
+        // East->West band dividers (top band)
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
+        // West->East band dividers (bottom band)
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weLeftY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+
+        // Removed: After intersection_4 to right margin - no streets after intersection_4
     }
 
     private void drawLaneDividerSegment(int startX, int endX, int y) {
@@ -487,7 +515,18 @@ public class IntersectionView extends Pane {
 
     private void drawLaneArrows(Street street) {
         String id = street.getId().toLowerCase();
-        String arrow = id.startsWith("west_east") ? "→" : id.startsWith("east_west") ? "←" : "";
+        String arrow = "";
+
+        if (id.startsWith("east_left") || id.startsWith("west_left")) {
+            arrow = "↰";
+        } else if (id.startsWith("east_center") || id.startsWith("west_center")) {
+            arrow = "↑";
+        } else if (id.startsWith("east_right") || id.startsWith("west_right")) {
+            arrow = "↑↱";
+        } else {
+            arrow = "wtf";
+        }
+
         if (arrow.isEmpty()) return;
 
         int startX = street.getPosX() + 12;
@@ -505,12 +544,12 @@ public class IntersectionView extends Pane {
     private void addHighwayLaneLabel(Street street) {
         String id = street.getId().toLowerCase();
         String label = null;
-        if (id.startsWith("west_east_left_lane")) label = "W (L)";
-        else if (id.startsWith("west_east_center_lane")) label = "West (C)";
-        else if (id.startsWith("west_east_right_lane")) label = "West (R)";
-        else if (id.startsWith("east_west_left_lane")) label = "East (L)";
-        else if (id.startsWith("east_west_center_lane")) label = "East (C)";
-        else if (id.startsWith("east_west_right_lane")) label = "East (R)";
+        if (id.startsWith("west_left")) label = "West (L)";
+        else if (id.startsWith("west_center")) label = "West (C)";
+        else if (id.startsWith("west_right")) label = "West (R)";
+        else if (id.startsWith("east_left")) label = "East (L)";
+        else if (id.startsWith("east_center")) label = "East (C)";
+        else if (id.startsWith("east_right")) label = "East (R)";
 
         Text t = new Text(street.getPosX() + 6, street.getPosY() + 14, label);
         t.setFill(Color.WHITE);

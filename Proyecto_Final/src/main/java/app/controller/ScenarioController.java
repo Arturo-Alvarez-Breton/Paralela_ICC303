@@ -69,57 +69,73 @@ public class ScenarioController {
     }
 
     /**
-     * Scenario 2: Two-way Highway (West->East top band, East->West bottom band)
-     * - 4 intersections: intersection_1 at start (East end), intersection_2/3/4 in middle positions
+     * Scenario 2: Two-way Highway (East->West top band, West->East bottom band)
+     * - 4 intersections: intersection_1 at start (West end), intersection_2/3/4 in middle positions
      * - 6 lanes total (3 per direction), each split into segments
      * - 2 traffic lights per middle intersection (one per direction)
      */
     public void initializeScenario2() {
         clearScenario();
 
-        // Layout constants
+        // Layout constants - centered and matching Scenario 1 dimensions
         final int sceneWidth = 1280;
-        final int leftMargin = 60;
-        final int rightMargin = sceneWidth - 60;
-        final int laneHeight = 28;
-        final int laneGap = 6;
-        final int bandGap = 50; // gap between top and bottom direction bands
-        final int topBandY = 220;
-        final int intersectionWidth = 22;
+        final int sceneHeight = 720;
+        final int centerX = sceneWidth / 2;
+        final int centerY = sceneHeight / 2;
 
-        // Compute lane Y positions (top band: W->E)
-        int weLeftY = topBandY;
-        int weCenterY = weLeftY + laneHeight + laneGap;
-        int weRightY = weCenterY + laneHeight + laneGap;
+        // Street dimensions matching Scenario 1 - making streets longer
+        final int laneWidth = 40; // Same as Scenario 1
+        final int laneHeight = 40; // Same as Scenario 1
+        final int laneGap = 8; // Slightly larger gap for better visibility
+        final int bandGap = 80; // Gap between top and bottom direction bands
+        final int intersectionSize = 80; // Same as Scenario 1
 
-        // Bottom band (E->W)
-        int ewLeftY = weRightY + laneHeight + bandGap;   // visually left lane of bottom band
+        // Calculate total highway height and center it vertically
+        int totalHighwayHeight = (laneHeight * 3) + (laneGap * 2) + bandGap + (laneHeight * 3) + (laneGap * 2);
+        int topBandY = centerY - (totalHighwayHeight / 2);
+
+        // Compute lane Y positions (top band: E->W) - INTERCAMBIADO
+        int ewLeftY = topBandY;
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        // Intersections: intersection_1 at East end, intersection_2/3/4 in middle positions
-        int totalBandHeight = (weRightY + laneHeight) - weLeftY + bandGap + (ewRightY + laneHeight - ewLeftY);
-        int intersectionsTopY = weLeftY - 6;
+        // Bottom band (W->E) - INTERCAMBIADO
+        int weLeftY = ewRightY + laneHeight + bandGap;
+        int weCenterY = weLeftY + laneHeight + laneGap;
+        int weRightY = weCenterY + laneHeight + laneGap;
 
-        // 4 intersections: 1 at start (East), 2-4 in middle positions
-        int[] intersectionXs = new int[] {leftMargin, 300, 600, 900};
+        // Center intersections horizontally with proper spacing - making highway longer
+        int totalRoadLength = 1000; // Increased from 800 to make streets longer
+        int leftMargin = centerX - (totalRoadLength / 2);
+        int intersectionSpacing = totalRoadLength / 3; // Divide into 3 equal segments for 4 intersections
+
+        int[] intersectionXs = new int[] {
+            leftMargin,
+            leftMargin + intersectionSpacing,
+            leftMargin + (intersectionSpacing * 2),
+            leftMargin + totalRoadLength
+        };
         String[] intersectionIds = new String[] {"intersection_1", "intersection_2", "intersection_3", "intersection_4"};
+
+        // Intersections with larger size
+        int intersectionsTopY = topBandY - 10;
+        int intersectionHeight = totalHighwayHeight + 20;
 
         intersections = new ArrayList<>();
         for (int i = 0; i < intersectionXs.length; i++) {
             String id = intersectionIds[i];
             Intersection inter = intersectionService.createStandardIntersection(id);
-            inter.setBounds(intersectionXs[i] - (intersectionWidth / 2), intersectionsTopY, intersectionWidth, totalBandHeight + 12);
+            inter.setBounds(intersectionXs[i] - (intersectionSize / 2), intersectionsTopY, intersectionSize, intersectionHeight);
             intersections.add(inter);
             intersectionMap.put(id, inter);
         }
 
-        // Streets
+        // Streets - INTERCAMBIADOS los parámetros
         createScenario2Streets(
-                leftMargin, rightMargin, intersectionXs, intersectionWidth,
+                leftMargin, leftMargin + totalRoadLength, intersectionXs, intersectionSize,
                 laneHeight,
-                weLeftY, weCenterY, weRightY,
-                ewLeftY, ewCenterY, ewRightY
+                ewLeftY, ewCenterY, ewRightY,  // Ahora East->West está arriba
+                weLeftY, weCenterY, weRightY   // Ahora West->East está abajo
         );
 
         // Traffic lights: only for middle intersections (intersection_2 and intersection_3)
@@ -144,8 +160,8 @@ public class ScenarioController {
     private void createScenario2Streets(
             int leftMargin, int rightMargin, int[] interXs, int interWidth,
             int laneHeight,
-            int weLeftY, int weCenterY, int weRightY,
-            int ewLeftY, int ewCenterY, int ewRightY
+            int ewLeftY, int ewCenterY, int ewRightY,
+            int weLeftY, int weCenterY, int weRightY
     ) {
         streets = new ArrayList<>();
 
@@ -183,15 +199,15 @@ public class ScenarioController {
         List<DirectionEnum> centerDirs = streetService.createCenterLaneDirections();
         List<DirectionEnum> rightDirs = streetService.createRightLaneDirections();
 
-        // West -> East lanes (top band)
-        builder.addSegments("west_east_left_lane", weLeftY, leftDirs);
-        builder.addSegments("west_east_center_lane", weCenterY, centerDirs);
-        builder.addSegments("west_east_right_lane", weRightY, rightDirs);
+        // East -> West lanes (top band) - INTERCAMBIADO
+        builder.addSegments("west_left_lane", ewLeftY, leftDirs);
+        builder.addSegments("west_center_lane", ewCenterY, centerDirs);
+        builder.addSegments("west_right_lane", ewRightY, rightDirs);
 
-        // East -> West lanes (bottom band)
-        builder.addSegments("east_west_right_lane", ewLeftY, leftDirs);
-        builder.addSegments("east_west_center_lane", ewCenterY, centerDirs);
-        builder.addSegments("east_west_left_lane", ewRightY, rightDirs);
+        // West -> East lanes (bottom band) - INTERCAMBIADO
+        builder.addSegments("east_right_lane", weLeftY, leftDirs);
+        builder.addSegments("east_center_lane", weCenterY, centerDirs);
+        builder.addSegments("east_left_lane", weRightY, rightDirs);
     }
 
     /**
