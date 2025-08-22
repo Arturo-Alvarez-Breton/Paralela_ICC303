@@ -200,14 +200,14 @@ public class ScenarioController {
         List<DirectionEnum> rightDirs = streetService.createRightLaneDirections();
 
         // East -> West lanes (top band) - INTERCAMBIADO
-        builder.addSegments("west_left_lane", ewLeftY, leftDirs);
+        builder.addSegments("west_right_lane", ewLeftY, leftDirs);
         builder.addSegments("west_center_lane", ewCenterY, centerDirs);
-        builder.addSegments("west_right_lane", ewRightY, rightDirs);
+        builder.addSegments("west_left_lane", ewRightY, rightDirs);
 
         // West -> East lanes (bottom band) - INTERCAMBIADO
-        builder.addSegments("east_right_lane", weLeftY, leftDirs);
+        builder.addSegments("east_left_lane", weLeftY, leftDirs);
         builder.addSegments("east_center_lane", weCenterY, centerDirs);
-        builder.addSegments("east_left_lane", weRightY, rightDirs);
+        builder.addSegments("east_right_lane", weRightY, rightDirs);
     }
 
     /**

@@ -516,15 +516,24 @@ public class IntersectionView extends Pane {
     private void drawLaneArrows(Street street) {
         String id = street.getId().toLowerCase();
         String arrow = "";
+        double rotation = 0; // Ángulo de rotación en grados
 
-        if (id.startsWith("east_left") || id.startsWith("west_left")) {
-            arrow = "↰";
-        } else if (id.startsWith("east_center") || id.startsWith("west_center")) {
-            arrow = "↑";
-        } else if (id.startsWith("east_right") || id.startsWith("west_right")) {
-            arrow = "↑↱";
-        } else {
-            arrow = "wtf";
+        // Determinar la flecha base según el tipo de carril
+        if (id.contains("left")) {
+            arrow = "↰"; // Giro izquierda + U-Turn
+        } else if (id.contains("center")) {
+            arrow = "↑"; // Solo recto
+        } else if (id.contains("right")) {
+            arrow = "↑↱"; // Recto + Giro derecha
+        }
+
+        // Determinar la rotación según el sentido del tráfico
+        if (id.startsWith("west_")) {
+            // Banda superior: East->West (hacia la izquierda)
+            rotation = 270; // Rotar 270° para que apunten hacia la izquierda
+        } else if (id.startsWith("east_")) {
+            // Banda inferior: West->East (hacia la derecha)
+            rotation = 90; // Rotar 90° para que apunten hacia la derecha
         }
 
         if (arrow.isEmpty()) return;
@@ -535,8 +544,12 @@ public class IntersectionView extends Pane {
 
         for (int x = startX; x < endX; x += 80) {
             Text a = new Text(x, centerY, arrow);
-            a.setFill(Color.WHITE);
+            a.setFill(Color.YELLOW);
             a.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+
+            // Aplicar rotación al texto
+            a.setRotate(rotation);
+
             this.getChildren().add(a);
         }
     }
@@ -624,7 +637,7 @@ public class IntersectionView extends Pane {
         this.getChildren().add(title);
 
         Text info = new Text(500, 52, String.format(
-            "Segmentos: %d | Intersecciones: %d | Semáforos: 6",
+            "Calles: %d | Intersecciones: %d | Semáforos: 6",
             scenarioController.getStreetCount(),
             scenarioController.getIntersectionCount()
         ));
