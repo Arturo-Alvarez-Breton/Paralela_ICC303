@@ -409,8 +409,8 @@ public class IntersectionView extends Pane {
         // 3) Intersecciones como rectángulos verticales
         drawScenario2Intersections();
 
-        // 4) Semáforos en entradas de intersecciones
-        drawScenario2TrafficLights();
+        // 4) Traffic light rectangles removed - will be implemented properly later
+        // drawScenario2TrafficLights();
 
         // 5) Título, reglas y volver
         addTitleScenario2();
@@ -450,13 +450,36 @@ public class IntersectionView extends Pane {
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        // Dibujar separaciones internas (después de cada carril excepto el último de cada banda)
-        int[] divY = new int[] {
-            weLeftY + laneHeight, weCenterY + laneHeight,
-            ewLeftY + laneHeight, ewCenterY + laneHeight
-        };
-        for (int y : divY) {
-            Rectangle divider = new Rectangle(leftMargin, y, rightMargin - leftMargin, 2);
+        // Get intersection positions to determine where streets exist (now only 4 intersections)
+        int[] intersectionXs = new int[] {leftMargin, 300, 600, 900};
+        int intersectionWidth = 22;
+
+        // Only draw lane dividers where there are actual street segments
+        // Between intersection_1 and intersection_2
+        int segmentStartX = intersectionXs[0] + intersectionWidth / 2 + 6;
+        int segmentEndX = intersectionXs[1] - intersectionWidth / 2 - 6;
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
+
+        // Between intersection_2 and intersection_3
+        segmentStartX = intersectionXs[1] + intersectionWidth / 2 + 6;
+        segmentEndX = intersectionXs[2] - intersectionWidth / 2 - 6;
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
+
+        // Between intersection_3 and intersection_4
+        segmentStartX = intersectionXs[2] + intersectionWidth / 2 + 6;
+        segmentEndX = intersectionXs[3] - intersectionWidth / 2 - 6;
+        drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
+        drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
+    }
+
+    private void drawLaneDividerSegment(int startX, int endX, int y) {
+        if (endX > startX) {
+            Rectangle divider = new Rectangle(startX, y, endX - startX, 2);
             divider.setFill(LANE_DIVIDER_COLOR);
             this.getChildren().add(divider);
         }

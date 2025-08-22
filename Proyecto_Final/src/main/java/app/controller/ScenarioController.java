@@ -70,9 +70,9 @@ public class ScenarioController {
 
     /**
      * Scenario 2: Two-way Highway (West->East top band, East->West bottom band)
-     * - 3 intersections at fixed X positions (300, 600, 900)
-     * - 6 lanes total (3 per direction), each split into 3 segments
-     * - 2 traffic lights per intersection (one per direction)
+     * - 4 intersections: intersection_1 at start (East end), intersection_2/3/4 in middle positions
+     * - 6 lanes total (3 per direction), each split into segments
+     * - 2 traffic lights per middle intersection (one per direction)
      */
     public void initializeScenario2() {
         clearScenario();
@@ -97,15 +97,17 @@ public class ScenarioController {
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        // Intersections at fixed X with full height over both bands
+        // Intersections: intersection_1 at East end, intersection_2/3/4 in middle positions
         int totalBandHeight = (weRightY + laneHeight) - weLeftY + bandGap + (ewRightY + laneHeight - ewLeftY);
         int intersectionsTopY = weLeftY - 6;
 
-        // Create intersections
-        int[] intersectionXs = new int[] {300, 600, 900};
+        // 4 intersections: 1 at start (East), 2-4 in middle positions
+        int[] intersectionXs = new int[] {leftMargin, 300, 600, 900};
+        String[] intersectionIds = new String[] {"intersection_1", "intersection_2", "intersection_3", "intersection_4"};
+
         intersections = new ArrayList<>();
         for (int i = 0; i < intersectionXs.length; i++) {
-            String id = "intersection_" + (i + 1);
+            String id = intersectionIds[i];
             Intersection inter = intersectionService.createStandardIntersection(id);
             inter.setBounds(intersectionXs[i] - (intersectionWidth / 2), intersectionsTopY, intersectionWidth, totalBandHeight + 12);
             intersections.add(inter);
@@ -120,9 +122,9 @@ public class ScenarioController {
                 ewLeftY, ewCenterY, ewRightY
         );
 
-        // Traffic lights: 2 per intersection (we/eW)
+        // Traffic lights: only for middle intersections (intersection_2 and intersection_3)
         trafficLights = new ArrayList<>();
-        for (int i = 0; i < intersectionXs.length; i++) {
+        for (int i = 1; i <= 2; i++) { // Only intersections 2 and 3 have traffic lights
             String idWe = "traffic_light_intersection_" + (i + 1) + "_we";
             String idEw = "traffic_light_intersection_" + (i + 1) + "_ew";
             TrafficLight tlWe = trafficLightService.createTrafficLight(idWe);
@@ -147,23 +149,25 @@ public class ScenarioController {
     ) {
         streets = new ArrayList<>();
 
-        // Helper to add 3 segments for a lane with given base ID and Y
+        // Helper to add segments for a lane with given base ID and Y
         class LaneBuilder {
             void addSegments(String baseId, int y, List<DirectionEnum> dirs) {
-                // segment1: left -> before intersection 1
-                int x0 = leftMargin;
-                int x1 = interXs[0] - interWidth / 2 - 6;
+                // segment1: after intersection_1 -> before intersection_2
+                int x0 = interXs[0] + interWidth / 2 + 6;
+                int x1 = interXs[1] - interWidth / 2 - 6;
                 if (x1 > x0) addStreet(baseId + "_segment1", x0, y, x1 - x0, laneHeight, dirs);
 
-                // segment2: after i1 -> before i2
-                int x2L = interXs[0] + interWidth / 2 + 6;
-                int x2R = interXs[1] - interWidth / 2 - 6;
+                // segment2: after intersection_2 -> before intersection_3
+                int x2L = interXs[1] + interWidth / 2 + 6;
+                int x2R = interXs[2] - interWidth / 2 - 6;
                 if (x2R > x2L) addStreet(baseId + "_segment2", x2L, y, x2R - x2L, laneHeight, dirs);
 
-                // segment3: after i2 -> before i3
-                int x3L = interXs[1] + interWidth / 2 + 6;
-                int x3R = interXs[2] - interWidth / 2 - 6;
+                // segment3: after intersection_3 -> before intersection_4
+                int x3L = interXs[2] + interWidth / 2 + 6;
+                int x3R = interXs[3] - interWidth / 2 - 6;
                 if (x3R > x3L) addStreet(baseId + "_segment3", x3L, y, x3R - x3L, laneHeight, dirs);
+
+                // segment4 removed - no streets after intersection_4
             }
 
             void addStreet(String id, int x, int y, int w, int h, List<DirectionEnum> dirs) {
