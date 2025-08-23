@@ -12,16 +12,226 @@ public class IntersectionManager {
     private static final Map<Movement, Set<Movement>> CONFLICTS = new HashMap<>();
 
     static {
-        // Ejemplos de conflictos — completa con todas tus reglas
+        // MATRIZ COMPLETA DE CONFLICTOS basada en la tabla de prioridades del README
+        // Formato: registerConflict(movimiento1, movimiento2) - indica que no pueden ser simultáneos
+        
+        // === CONFLICTOS PARA MOVIMIENTOS STRAIGHT ===
+        // STRAIGHT desde NORTE: conflicto con carriles de la DERECHA (ESTE)
         registerConflict(
                 new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN)
+        );
+        
+        // STRAIGHT desde SUR: conflicto con carriles de la DERECHA (OESTE)
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN)
+        );
+        
+        // STRAIGHT desde ESTE: conflicto con carriles de la DERECHA (SUR)
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.STRAIGHT),
                 new Movement(Movement.Entry.SUR, Movement.Turn.STRAIGHT)
         );
         registerConflict(
-                new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT),
-                new Movement(Movement.Entry.OESTE,  Movement.Turn.LEFT)
+                new Movement(Movement.Entry.ESTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT)
         );
-        // … añade aquí el resto de pares en conflicto …
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN)
+        );
+        
+        // STRAIGHT desde OESTE: conflicto con carriles de la DERECHA (NORTE)
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.STRAIGHT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN)
+        );
+        
+        // === CONFLICTOS PARA MOVIMIENTOS LEFT ===
+        // LEFT desde cualquier dirección: conflicto con carro OPUESTO en cualquier movimiento
+        
+        // LEFT desde NORTE: conflicto con SUR (opuesto)
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.SUR, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.SUR, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN)
+        );
+        
+        // LEFT desde SUR: conflicto con NORTE (opuesto)
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN)
+        );
+        
+        // LEFT desde ESTE: conflicto con OESTE (opuesto)
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN)
+        );
+        
+        // LEFT desde OESTE: conflicto con ESTE (opuesto)
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN)
+        );
+        
+        // === CONFLICTOS PARA MOVIMIENTOS U-TURN ===
+        // U-TURN: conflicto con carro a la IZQUIERDA en cualquier movimiento
+        
+        // U-TURN desde NORTE: conflicto con OESTE (izquierda)
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN)
+        );
+        
+        // U-TURN desde SUR: conflicto con ESTE (izquierda)
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN)
+        );
+        
+        // U-TURN desde ESTE: conflicto con NORTE (izquierda)
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN)
+        );
+        
+        // U-TURN desde OESTE: conflicto con SUR (izquierda)
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.SUR, Movement.Turn.STRAIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.SUR, Movement.Turn.RIGHT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.SUR, Movement.Turn.LEFT)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN)
+        );
+        
+        // === CONFLICTOS ADICIONALES PARA SEGURIDAD ===
+        // Múltiples U-TURNS simultáneos siempre generan conflicto
+        registerConflict(
+                new Movement(Movement.Entry.NORTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.SUR, Movement.Turn.U_TURN)
+        );
+        registerConflict(
+                new Movement(Movement.Entry.ESTE, Movement.Turn.U_TURN),
+                new Movement(Movement.Entry.OESTE, Movement.Turn.U_TURN)
+        );
     }
 
     private static void registerConflict(Movement a, Movement b) {

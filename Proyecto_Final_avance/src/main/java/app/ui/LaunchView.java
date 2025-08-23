@@ -22,8 +22,8 @@ public class LaunchView {
         Button btnStart = new Button("Iniciar");
         btnStart.getStyleClass().add("start-btn");
         btnStart.setOnAction(e -> {
-            // Cuando pulso, cargo la escena de la intersección
-            IntersectionView intersection = new IntersectionView();
+            // Cuando pulso, cargo la nueva escena basada en ticks
+            TickBasedIntersectionView intersection = new TickBasedIntersectionView();
             Scene intersectionScene = new Scene(intersection, WIDTH, HEIGHT);
             intersectionScene.getStylesheets().add(
                     getClass().getResource("/css//launchView.css").toExternalForm()
