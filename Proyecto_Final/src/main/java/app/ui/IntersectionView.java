@@ -443,19 +443,19 @@ public class IntersectionView extends Pane {
         // Street dimensions matching Scenario 1
         final int laneHeight = 40; // Same as Scenario 1
         final int laneGap = 8; // Slightly larger gap for better visibility
-        final int bandGap = 80; // Gap between top and bottom direction bands
+        final int bandGap = 10; // REDUCIDO: Gap mínimo entre top y bottom direction bands - DEBE COINCIDIR CON ScenarioController
         final int intersectionSize = 80; // Same as Scenario 1
 
         // Calculate total highway height and center it vertically
         int totalHighwayHeight = (laneHeight * 3) + (laneGap * 2) + bandGap + (laneHeight * 3) + (laneGap * 2);
         int topBandY = centerY - (totalHighwayHeight / 2);
 
-        // INTERCAMBIADO: East->West ahora está arriba, West->East abajo
+        // INTERCAMBIADO: East->West ahora está arriba, West->East abajo - PEGADAS
         int ewLeftY = topBandY;
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        int weLeftY = ewRightY + laneHeight + bandGap;
+        int weLeftY = ewRightY + laneHeight + bandGap; // PEGADO con gap mínimo
         int weCenterY = weLeftY + laneHeight + laneGap;
         int weRightY = weCenterY + laneHeight + laneGap;
 

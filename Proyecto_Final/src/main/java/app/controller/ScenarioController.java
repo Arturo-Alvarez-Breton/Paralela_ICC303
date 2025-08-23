@@ -87,7 +87,7 @@ public class ScenarioController {
         final int laneWidth = 40; // Same as Scenario 1
         final int laneHeight = 40; // Same as Scenario 1
         final int laneGap = 8; // Slightly larger gap for better visibility
-        final int bandGap = 80; // Gap between top and bottom direction bands
+        final int bandGap = 10; // REDUCIDO: Gap mínimo entre top y bottom direction bands
         final int intersectionSize = 80; // Same as Scenario 1
 
         // Calculate total highway height and center it vertically
@@ -99,7 +99,7 @@ public class ScenarioController {
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        // Bottom band (W->E) - INTERCAMBIADO
+        // Bottom band (W->E) - INTERCAMBIADO - PEGADO al top band
         int weLeftY = ewRightY + laneHeight + bandGap;
         int weCenterY = weLeftY + laneHeight + laneGap;
         int weRightY = weCenterY + laneHeight + laneGap;
@@ -117,9 +117,9 @@ public class ScenarioController {
         };
         String[] intersectionIds = new String[] {"intersection_1", "intersection_2", "intersection_3", "intersection_4"};
 
-        // Intersections with larger size
-        int intersectionsTopY = topBandY - 10;
-        int intersectionHeight = totalHighwayHeight + 20;
+        // Intersections with adjusted size to match the reduced highway height
+        int intersectionsTopY = topBandY - 5; // Menor margen superior
+        int intersectionHeight = totalHighwayHeight + 10; // Menor padding total
 
         intersections = new ArrayList<>();
         for (int i = 0; i < intersectionXs.length; i++) {
