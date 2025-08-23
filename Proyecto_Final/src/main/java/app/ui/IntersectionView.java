@@ -471,6 +471,12 @@ public class IntersectionView extends Pane {
             leftMargin + totalRoadLength
         };
 
+        // NUEVA CARACTERÍSTICA: Línea divisoria central entre bandas West y East
+        int centralDividerY = ewRightY + laneHeight + (bandGap / 2); // Centro del gap entre bandas
+        Rectangle centralDivider = new Rectangle(leftMargin, centralDividerY - 1, totalRoadLength, 3);
+        centralDivider.setFill(Color.WHITE); // Color blanco para distinguir de las líneas amarillas
+        this.getChildren().add(centralDivider);
+
         // Draw lane dividers where there are actual street segments
         // Between intersection_1 and intersection_2
         int segmentStartX = intersectionXs[0] + intersectionSize / 2 + 6;
@@ -638,25 +644,27 @@ public class IntersectionView extends Pane {
     private void addHighwayRulesPanel() {
         int x = 50;
         int y = 40;
-        Rectangle panel = new Rectangle(x, y, 420, 110);
-        panel.setArcWidth(10);
-        panel.setArcHeight(10);
+        // REDUCIDO: Panel más pequeño que ocupa solo el espacio necesario
+        Rectangle panel = new Rectangle(x, y, 320, 90); // Reducido de 420x110 a 320x90
+        panel.setArcWidth(8); // Bordes ligeramente menos redondeados
+        panel.setArcHeight(8);
         panel.setFill(Color.color(0, 0, 0, 0.35));
         panel.setStroke(Color.WHITE);
         panel.setStrokeWidth(1);
         this.getChildren().add(panel);
 
-        Text title = new Text(x + 12, y + 22, "Reglas de Carriles");
+        Text title = new Text(x + 10, y + 18, "Reglas de Carriles"); // Márgenes más pequeños
         title.setFill(Color.WHITE);
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 14)); // Fuente ligeramente más pequeña
         this.getChildren().add(title);
 
-        Text r1 = new Text(x + 12, y + 42, "Izquierdo: Giro izquierda + U-Turn");
-        Text r2 = new Text(x + 12, y + 62, "Central: Solo recto");
-        Text r3 = new Text(x + 12, y + 82, "Derecho: Recto + Giro derecha");
+        // Texto más compacto con menos espaciado vertical
+        Text r1 = new Text(x + 10, y + 36, "Izquierdo: Giro izquierda + U-Turn");
+        Text r2 = new Text(x + 10, y + 52, "Central: Solo recto");
+        Text r3 = new Text(x + 10, y + 68, "Derecho: Recto + Giro derecha");
         for (Text t : new Text[]{r1, r2, r3}) {
             t.setFill(Color.LIGHTGRAY);
-            t.setFont(Font.font("Arial", FontWeight.NORMAL, 14));
+            t.setFont(Font.font("Arial", FontWeight.NORMAL, 12)); // Fuente más pequeña
             this.getChildren().add(t);
         }
     }

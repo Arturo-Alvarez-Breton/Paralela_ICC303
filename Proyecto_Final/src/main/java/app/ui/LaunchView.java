@@ -1,5 +1,6 @@
 package app.ui;
 
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -42,8 +43,15 @@ public class LaunchView {
             primaryStage.setScene(highwayScene);
         });
 
+        // Botón Salir de la aplicación
+        Button btnExit = new Button("Salir");
+        btnExit.getStyleClass().add("exit-btn");
+        btnExit.setOnAction(e -> {
+            Platform.exit(); // Cierra la aplicación JavaFX
+        });
+
         // Contenedor vertical
-        VBox root = new VBox(30, title, btnStart1, btnStart2);
+        VBox root = new VBox(30, title, btnStart1, btnStart2, btnExit);
         root.setAlignment(Pos.CENTER);
 
         Scene scene = new Scene(root, WIDTH, HEIGHT);

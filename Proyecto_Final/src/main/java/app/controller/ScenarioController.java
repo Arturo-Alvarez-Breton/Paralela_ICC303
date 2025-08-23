@@ -124,8 +124,25 @@ public class ScenarioController {
         intersections = new ArrayList<>();
         for (int i = 0; i < intersectionXs.length; i++) {
             String id = intersectionIds[i];
+            int intersectionIndex = i + 1;
             Intersection inter = intersectionService.createStandardIntersection(id);
-            inter.setBounds(intersectionXs[i] - (intersectionSize / 2), intersectionsTopY, intersectionSize, intersectionHeight);
+
+            // Ajustar dimensiones según el tipo de intersección
+            if (intersectionIndex == 1) {
+                // Intersección 1: Solo carriles West (banda superior East->West)
+                int westOnlyHeight = (laneHeight * 3) + (laneGap * 2); // Solo 3 carriles West
+                int westOnlyTopY = ewLeftY - 5; // Margen pequeño arriba
+                inter.setBounds(intersectionXs[i] - (intersectionSize / 2), westOnlyTopY, intersectionSize, westOnlyHeight + 10);
+            } else if (intersectionIndex == 4) {
+                // Intersección 4: Solo carriles East (banda inferior West->East)
+                int eastOnlyHeight = (laneHeight * 3) + (laneGap * 2); // Solo 3 carriles East
+                int eastOnlyTopY = weLeftY - 5; // Margen pequeño arriba
+                inter.setBounds(intersectionXs[i] - (intersectionSize / 2), eastOnlyTopY, intersectionSize, eastOnlyHeight + 10);
+            } else {
+                // Intersecciones 2 y 3: Dimensiones completas (ambas bandas + calles de salida)
+                inter.setBounds(intersectionXs[i] - (intersectionSize / 2), intersectionsTopY, intersectionSize, intersectionHeight);
+            }
+
             intersections.add(inter);
             intersectionMap.put(id, inter);
         }
@@ -198,9 +215,17 @@ public class ScenarioController {
                 List<DirectionEnum> straightOnly = List.of(DirectionEnum.STRAIGHT);
 
                 // Para cada intersección, crear calles norte y sur de salida (2 carriles por dirección)
+                // ELIMINADO: Las intersecciones 1 y 4 no tendrán calles de salida
                 for (int i = 0; i < interXs.length; i++) {
+                    int intersectionIndex = i + 1; // intersection_1, intersection_2, etc.
+
+                    // Solo agregar calles de salida para las intersecciones 2 y 3
+                    if (intersectionIndex == 1 || intersectionIndex == 4) {
+                        continue; // Saltar intersecciones 1 y 4
+                    }
+
                     int intersectionX = interXs[i];
-                    String intersectionId = "intersection_" + (i + 1);
+                    String intersectionId = "intersection_" + intersectionIndex;
 
                     // Obtener la intersección correspondiente para usar sus dimensiones
                     Intersection intersection = intersectionMap.get(intersectionId);
