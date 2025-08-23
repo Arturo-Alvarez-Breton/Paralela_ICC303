@@ -527,6 +527,8 @@ public class IntersectionView extends Pane {
             arrow = "↑↱"; // Recto + Giro derecha
         }
 
+        if(id.contains("south") || id.contains("north")) { arrow = "↑";}
+
         // Determinar la rotación según el sentido del tráfico
         if (id.startsWith("west_")) {
             // Banda superior: East->West (hacia la izquierda)
@@ -534,6 +536,10 @@ public class IntersectionView extends Pane {
         } else if (id.startsWith("east_")) {
             // Banda inferior: West->East (hacia la derecha)
             rotation = 90; // Rotar 90° para que apunten hacia la derecha
+        } else if (id.startsWith("north_")) {
+            rotation = 0;
+        } else if (id.startsWith("south_")) {
+            rotation = 180; // Rotar 180° para que apunten hacia abajo
         }
 
         if (arrow.isEmpty()) return;
@@ -557,20 +563,42 @@ public class IntersectionView extends Pane {
     private void addHighwayLaneLabel(Street street) {
         String id = street.getId().toLowerCase();
         String label = null;
-        if (id.startsWith("west_left")) label = "West (L) ";
-        else if (id.startsWith("west_center")) label = "West (C) ";
-        else if (id.startsWith("west_right")) label = "West (R) ";
-        else if (id.startsWith("east_left")) label = "East (L) ";
-        else if (id.startsWith("east_center")) label = "East (C) ";
-        else if (id.startsWith("east_right")) label = "East (R) ";
 
-        char idNum = id.charAt(id.length() - 1);
-        label = label.concat(String.valueOf(idNum));
+        // Verificar si es una calle de salida norte-sur para manejarla diferente
+        // ARREGLO 2: Actualizar las etiquetas para mostrar "N Exit" y "S Exit"
+        if (id.contains("north_salida")) {
+            label = "N Exit";
+        } else if (id.contains("south_salida")) {
+            label = "S Exit";
+        } else {
+            // Para las calles principales este-oeste
+            if (id.startsWith("west_left_lane")) label = "West (L)";
+            else if (id.startsWith("west_center_lane")) label = "West (C)";
+            else if (id.startsWith("west_right_lane")) label = "West (R)";
+            else if (id.startsWith("east_left_lane")) label = "East (L)";
+            else if (id.startsWith("east_center_lane")) label = "East (C)";
+            else if (id.startsWith("east_right_lane")) label = "East (R)";
+        }
 
-        Text t = new Text(street.getPosX() + 6, street.getPosY() + 14, label);
-        t.setFill(Color.WHITE);
-        t.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
-        this.getChildren().add(t);
+        // Solo crear el texto si label no es null
+        if (label != null) {
+            // Intentar extraer el número de segmento si existe
+            if (id.contains("segment")) {
+                char segmentNum = '?';
+                if (id.contains("segment1")) segmentNum = '1';
+                else if (id.contains("segment2")) segmentNum = '2';
+                else if (id.contains("segment3")) segmentNum = '3';
+
+                if (segmentNum != '?') {
+                    label = label + " " + segmentNum;
+                }
+            }
+
+            Text t = new Text(street.getPosX() + 6, street.getPosY() + 14, label);
+            t.setFill(Color.WHITE);
+            t.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
+            this.getChildren().add(t);
+        }
     }
 
     private void drawScenario2TrafficLights() {

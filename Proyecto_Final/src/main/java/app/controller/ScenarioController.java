@@ -191,6 +191,52 @@ public class ScenarioController {
                 streets.add(s);
                 streetMap.put(id, s);
             }
+
+            // Método para crear calles norte-sur de salida alrededor de intersecciones
+            void addNorthSouthExitStreets() {
+                // Dirección STRAIGHT únicamente para calles de salida
+                List<DirectionEnum> straightOnly = List.of(DirectionEnum.STRAIGHT);
+
+                // Para cada intersección, crear calles norte y sur de salida (2 carriles por dirección)
+                for (int i = 0; i < interXs.length; i++) {
+                    int intersectionX = interXs[i];
+                    String intersectionId = "intersection_" + (i + 1);
+
+                    // Obtener la intersección correspondiente para usar sus dimensiones
+                    Intersection intersection = intersectionMap.get(intersectionId);
+                    if (intersection == null) continue;
+
+                    // Calcular posiciones Y utilizando el tamaño de la intersección
+                    // ARREGLO: Usar las dimensiones Y de la intersección para calcular posiciones
+                    int northStreetY = intersection.getPosY(); // Parte superior de la intersección
+                    int southStreetY = intersection.getPosY() + intersection.getHeight(); // Parte inferior de la intersección
+
+                    // Longitud de las calles norte-sur de salida
+                    int exitStreetLength = 120;
+
+                    // === CALLES NORTE (2 carriles lado a lado) - AMBAS SON DE SALIDA ===
+                    // Carril Norte Salida Izquierdo - alineado con el centro de la intersección
+                    addStreet("north_salida_left_" + intersectionId,
+                             intersectionX - laneHeight, northStreetY - exitStreetLength,
+                             laneHeight, exitStreetLength, straightOnly);
+
+                    // Carril Norte Salida Derecho - alineado con el centro de la intersección
+                    addStreet("north_salida_right_" + intersectionId,
+                             intersectionX, northStreetY - exitStreetLength,
+                             laneHeight, exitStreetLength, straightOnly);
+
+                    // === CALLES SUR (2 carriles lado a lado) - AMBAS SON DE SALIDA ===
+                    // Carril Sur Salida Izquierdo - alineado con el centro de la intersección
+                    addStreet("south_salida_left_" + intersectionId,
+                             intersectionX - laneHeight, southStreetY,
+                             laneHeight, exitStreetLength, straightOnly);
+
+                    // Carril Sur Salida Derecho - alineado con el centro de la intersección
+                    addStreet("south_salida_right_" + intersectionId,
+                             intersectionX, southStreetY,
+                             laneHeight, exitStreetLength, straightOnly);
+                }
+            }
         }
         LaneBuilder builder = new LaneBuilder();
 
@@ -208,6 +254,9 @@ public class ScenarioController {
         builder.addSegments("east_left_lane", weLeftY, leftDirs);
         builder.addSegments("east_center_lane", weCenterY, centerDirs);
         builder.addSegments("east_right_lane", weRightY, rightDirs);
+
+        // Agregar calles norte-sur de salida alrededor de las intersecciones
+        builder.addNorthSouthExitStreets();
     }
 
     /**
