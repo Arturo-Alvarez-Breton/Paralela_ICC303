@@ -1,8 +1,10 @@
 package app.ui;
 
 import app.controller.ScenarioController;
+import app.controller.TrafficController;
 import app.model.Street;
 import app.model.Intersection;
+import app.model.TrafficLight;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -12,6 +14,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Vista visual para mostrar el Escenario 1 con 8 calles (carriles de entrada y salida)
@@ -26,15 +29,21 @@ public class IntersectionView extends Pane {
 
     private final int scenarioNumber; // 1: intersección clásica, 2: autopista
 
-    public IntersectionView() {
-        this(1);
-    }
+    // Traffic light management for Scenario 2
+    private TrafficController trafficController;
+    private final List<TrafficLightView> trafficLightViews;
 
     public IntersectionView(int scenarioNumber) {
         this.scenarioNumber = scenarioNumber;
         this.scenarioController = new ScenarioController();
+        this.trafficLightViews = new ArrayList<>();
         initializeScenario();
         drawScenario();
+
+        // Initialize traffic control for Scenario 2
+        if (scenarioNumber == 2) {
+            initializeTrafficControl();
+        }
     }
 
     /**
@@ -123,32 +132,6 @@ public class IntersectionView extends Pane {
     }
 
     /**
-     * Dibuja las calles Norte-Sur con sus carriles correspondientes
-     */
-    private void drawNorthSouthStreets(List<Street> streets) {
-        for (Street street : streets) {
-            String dir = parseDirectionFromId(street.getId());
-            if ("north".equals(dir) || "south".equals(dir)) {
-                drawIndividualStreet(street);
-                addStreetDirectionLabel(street);
-            }
-        }
-    }
-
-    /**
-     * Dibuja las calles Este-Oeste con sus carriles correspondientes
-     */
-    private void drawEastWestStreets(List<Street> streets) {
-        for (Street street : streets) {
-            String dir = parseDirectionFromId(street.getId());
-            if ("east".equals(dir) || "west".equals(dir)) {
-                drawIndividualStreet(street);
-                addStreetDirectionLabel(street);
-            }
-        }
-    }
-
-    /**
      * Dibuja una calle individual como rectángulo
      */
     private void drawIndividualStreet(Street street) {
@@ -178,7 +161,7 @@ public class IntersectionView extends Pane {
         // Línea divisoria vertical Norte-Sur (entre carriles de entrada y salida)
         Rectangle verticalDivider = new Rectangle(
             centerX - 1, // Centro entre los carriles
-            centerY - intersectionSize/2 - streetLength, // Desde arriba
+            centerY - intersectionSize/2.0 - streetLength, // Desde arriba
             2, // Ancho de la línea
             streetLength * 2 + intersectionSize // Altura total
         );
@@ -187,7 +170,7 @@ public class IntersectionView extends Pane {
 
         // Línea divisoria horizontal Este-Oeste (entre carriles de entrada y salida)
         Rectangle horizontalDivider = new Rectangle(
-            centerX - intersectionSize/2 - streetLength, // Desde la izquierda
+            centerX - intersectionSize/2.0 - streetLength, // Desde la izquierda
             centerY - 1, // Centro entre los carriles
             streetLength * 2 + intersectionSize, // Ancho total
             2 // Alto de la línea
@@ -245,8 +228,8 @@ public class IntersectionView extends Pane {
      * Posiciona las etiquetas según la orientación de la calle
      */
     private void positionStreetLabel(Text label, Street street) {
-        double x = street.getPosX() + street.getWidth() / 2 - 20;
-        double y = street.getPosY() + street.getHeight() / 2;
+        double x = street.getPosX() + street.getWidth() / 2.0 - 20;
+        double y = street.getPosY() + street.getHeight() / 2.0;
 
         String dir = parseDirectionFromId(street.getId());
         if ("north".equals(dir) || "south".equals(dir)) {
@@ -269,8 +252,8 @@ public class IntersectionView extends Pane {
         int intersectionSize = 80;
 
         Rectangle intersection = new Rectangle(
-            centerX - intersectionSize / 2,
-            centerY - intersectionSize / 2,
+            centerX - intersectionSize / 2.0,
+            centerY - intersectionSize / 2.0,
             intersectionSize,
             intersectionSize
         );
@@ -376,6 +359,10 @@ public class IntersectionView extends Pane {
                            "-fx-font-size: 16px; -fx-padding: 10 20 10 20; -fx-background-radius: 5;");
 
         backButton.setOnAction(e -> {
+            // Clean up traffic controller before switching scenes
+            if (trafficController != null) {
+                trafficController.stopControl();
+            }
             // Obtener el Stage actual desde la escena
             javafx.stage.Stage stage = (javafx.stage.Stage) this.getScene().getWindow();
             LaunchView launchView = new LaunchView();
@@ -383,13 +370,6 @@ public class IntersectionView extends Pane {
         });
 
         this.getChildren().add(backButton);
-    }
-
-    /**
-     * Obtiene el controlador de escenario para uso externo
-     */
-    public ScenarioController getScenarioController() {
-        return scenarioController;
     }
 
     // ====== ESCENARIO 2 (Autopista) ======
@@ -409,13 +389,105 @@ public class IntersectionView extends Pane {
         // 3) Intersecciones como rectángulos verticales
         drawScenario2Intersections();
 
-        // 4) Traffic light rectangles removed - will be implemented properly later
-        // drawScenario2TrafficLights();
+        // 4) Traffic lights - Properly positioned and integrated
+        drawScenario2TrafficLights();
 
-        // 5) Título, reglas y volver
+        // 5) Título, reglas y controles
         addTitleScenario2();
         addHighwayRulesPanel();
+        addTrafficControlPanel();
         addBackButton();
+    }
+
+    /**
+     * Initializes traffic light control system for Scenario 2
+     */
+    private void initializeTrafficControl() {
+        List<Intersection> intersections = scenarioController.getAllIntersections();
+        List<TrafficLight> trafficLights = scenarioController.getAllTrafficLights();
+
+        if (!trafficLights.isEmpty()) {
+            this.trafficController = new TrafficController(intersections, trafficLights);
+
+            // Position traffic lights properly
+            positionTrafficLights();
+
+            // Create visual representations
+            createTrafficLightViews();
+
+            // Start the traffic control system
+            trafficController.startControl();
+
+            System.out.println("Traffic control initialized with " + trafficLights.size() + " traffic lights");
+        }
+    }
+
+    /**
+     * Positions traffic lights at appropriate locations relative to intersections
+     */
+    private void positionTrafficLights() {
+        List<TrafficLight> trafficLights = scenarioController.getAllTrafficLights();
+
+        for (TrafficLight light : trafficLights) {
+            String lightId = light.getId();
+
+            // Find corresponding intersection
+            Intersection targetIntersection = null;
+            if (lightId.contains("intersection_1")) {
+                targetIntersection = findIntersectionById("intersection_1");
+            } else if (lightId.contains("intersection_2")) {
+                targetIntersection = findIntersectionById("intersection_2");
+            } else if (lightId.contains("intersection_3")) {
+                targetIntersection = findIntersectionById("intersection_3");
+            } else if (lightId.contains("intersection_4")) {
+                targetIntersection = findIntersectionById("intersection_4");
+            }
+
+            if (targetIntersection != null) {
+                // Position lights relative to intersection
+                double intersectionX = targetIntersection.getPosX() + targetIntersection.getWidth() / 2.0;
+                double intersectionY = targetIntersection.getPosY();
+
+                if (lightId.contains("_we")) {
+                    // West->East traffic light (RIGHT side - closer to end of street)
+                    light.setPosition(intersectionX + 15, intersectionY + 20);
+                } else if (lightId.contains("_ew")) {
+                    // East->West traffic light (LEFT side - closer to end of street)
+                    light.setPosition(intersectionX - 35, intersectionY + targetIntersection.getHeight() - 80);
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates visual representations for all traffic lights
+     */
+    private void createTrafficLightViews() {
+        List<TrafficLight> trafficLights = scenarioController.getAllTrafficLights();
+
+        for (TrafficLight light : trafficLights) {
+            // Create appropriately sized traffic light for highway scenario
+            TrafficLightView lightView = new TrafficLightView(light, 16, 48, 6);
+
+            // Register with controller for updates
+            trafficController.registerTrafficLightView(lightView);
+
+            // Add to scene
+            this.getChildren().add(lightView);
+            trafficLightViews.add(lightView);
+        }
+
+        System.out.println("Created " + trafficLightViews.size() + " traffic light views");
+    }
+
+    /**
+     * Helper method to find intersection by ID
+     */
+    private Intersection findIntersectionById(String id) {
+        return scenarioController.getAllIntersections().stream()
+                .filter(intersection -> intersection.getId().equals(id))
+                .findFirst()
+                .orElse(null);
     }
 
     private void drawScenario2Intersections() {
@@ -443,26 +515,25 @@ public class IntersectionView extends Pane {
         // Street dimensions matching Scenario 1
         final int laneHeight = 40; // Same as Scenario 1
         final int laneGap = 8; // Slightly larger gap for better visibility
-        final int bandGap = 10; // REDUCIDO: Gap mínimo entre top y bottom direction bands - DEBE COINCIDIR CON ScenarioController
+        final int bandGap = 10; // Gap between top and bottom direction bands
         final int intersectionSize = 80; // Same as Scenario 1
 
         // Calculate total highway height and center it vertically
         int totalHighwayHeight = (laneHeight * 3) + (laneGap * 2) + bandGap + (laneHeight * 3) + (laneGap * 2);
-        int topBandY = centerY - (totalHighwayHeight / 2);
 
-        // INTERCAMBIADO: East->West ahora está arriba, West->East abajo - PEGADAS
-        int ewLeftY = topBandY;
+        // East->West lanes (top band)
+        int ewLeftY = centerY - (totalHighwayHeight / 2);
         int ewCenterY = ewLeftY + laneHeight + laneGap;
         int ewRightY = ewCenterY + laneHeight + laneGap;
 
-        int weLeftY = ewRightY + laneHeight + bandGap; // PEGADO con gap mínimo
+        // West->East lanes (bottom band)
+        int weLeftY = ewRightY + laneHeight + bandGap;
         int weCenterY = weLeftY + laneHeight + laneGap;
-        int weRightY = weCenterY + laneHeight + laneGap;
 
-        // Center intersections horizontally with proper spacing - matching controller's longer highway
-        int totalRoadLength = 1000; // Increased to match controller
+        // Center intersections horizontally with proper spacing
+        int totalRoadLength = 1000;
         int leftMargin = centerX - (totalRoadLength / 2);
-        int intersectionSpacing = totalRoadLength / 3; // Divide into 3 equal segments for 4 intersections
+        int intersectionSpacing = totalRoadLength / 3;
 
         int[] intersectionXs = new int[] {
             leftMargin,
@@ -471,44 +542,36 @@ public class IntersectionView extends Pane {
             leftMargin + totalRoadLength
         };
 
-        // NUEVA CARACTERÍSTICA: Línea divisoria central entre bandas West y East
-        int centralDividerY = ewRightY + laneHeight + (bandGap / 2); // Centro del gap entre bandas
+        // Central divider line between bands
+        int centralDividerY = ewRightY + laneHeight + (bandGap / 2);
         Rectangle centralDivider = new Rectangle(leftMargin, centralDividerY - 1, totalRoadLength, 3);
-        centralDivider.setFill(Color.WHITE); // Color blanco para distinguir de las líneas amarillas
+        centralDivider.setFill(Color.WHITE);
         this.getChildren().add(centralDivider);
 
         // Draw lane dividers where there are actual street segments
         // Between intersection_1 and intersection_2
         int segmentStartX = intersectionXs[0] + intersectionSize / 2 + 6;
         int segmentEndX = intersectionXs[1] - intersectionSize / 2 - 6;
-        // East->West band dividers (top band - INTERCAMBIADO)
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
-        // West->East band dividers (bottom band - INTERCAMBIADO)
         drawLaneDividerSegment(segmentStartX, segmentEndX, weLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
 
         // Between intersection_2 and intersection_3
         segmentStartX = intersectionXs[1] + intersectionSize / 2 + 6;
         segmentEndX = intersectionXs[2] - intersectionSize / 2 - 6;
-        // East->West band dividers (top band)
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
-        // West->East band dividers (bottom band)
         drawLaneDividerSegment(segmentStartX, segmentEndX, weLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
 
         // Between intersection_3 and intersection_4
         segmentStartX = intersectionXs[2] + intersectionSize / 2 + 6;
         segmentEndX = intersectionXs[3] - intersectionSize / 2 - 6;
-        // East->West band dividers (top band)
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, ewCenterY + laneHeight);
-        // West->East band dividers (bottom band)
         drawLaneDividerSegment(segmentStartX, segmentEndX, weLeftY + laneHeight);
         drawLaneDividerSegment(segmentStartX, segmentEndX, weCenterY + laneHeight);
-
-        // Removed: After intersection_4 to right margin - no streets after intersection_4
     }
 
     private void drawLaneDividerSegment(int startX, int endX, int y) {
@@ -522,30 +585,30 @@ public class IntersectionView extends Pane {
     private void drawLaneArrows(Street street) {
         String id = street.getId().toLowerCase();
         String arrow = "";
-        double rotation = 0; // Ángulo de rotación en grados
+        double rotation = 0;
 
-        // Determinar la flecha base según el tipo de carril
+        // Determine arrow based on lane type
         if (id.contains("left")) {
-            arrow = "↰"; // Giro izquierda + U-Turn
+            arrow = "↰";
         } else if (id.contains("center")) {
-            arrow = "↑"; // Solo recto
+            arrow = "↑";
         } else if (id.contains("right")) {
-            arrow = "↑↱"; // Recto + Giro derecha
+            arrow = "↑↱";
         }
 
-        if(id.contains("south") || id.contains("north")) { arrow = "↑";}
+        if(id.contains("south") || id.contains("north")) {
+            arrow = "↑";
+        }
 
-        // Determinar la rotación según el sentido del tráfico
+        // Determine rotation based on traffic direction
         if (id.startsWith("west_")) {
-            // Banda superior: East->West (hacia la izquierda)
-            rotation = 270; // Rotar 270° para que apunten hacia la izquierda
+            rotation = 270; // Point left
         } else if (id.startsWith("east_")) {
-            // Banda inferior: West->East (hacia la derecha)
-            rotation = 90; // Rotar 90° para que apunten hacia la derecha
+            rotation = 90; // Point right
         } else if (id.startsWith("north_")) {
-            rotation = 0;
+            rotation = 0; // Point up
         } else if (id.startsWith("south_")) {
-            rotation = 180; // Rotar 180° para que apunten hacia abajo
+            rotation = 180; // Point down
         }
 
         if (arrow.isEmpty()) return;
@@ -558,10 +621,7 @@ public class IntersectionView extends Pane {
             Text a = new Text(x, centerY, arrow);
             a.setFill(Color.YELLOW);
             a.setFont(Font.font("Arial", FontWeight.BOLD, 16));
-
-            // Aplicar rotación al texto
             a.setRotate(rotation);
-
             this.getChildren().add(a);
         }
     }
@@ -570,14 +630,11 @@ public class IntersectionView extends Pane {
         String id = street.getId().toLowerCase();
         String label = null;
 
-        // Verificar si es una calle de salida norte-sur para manejarla diferente
-        // ARREGLO 2: Actualizar las etiquetas para mostrar "N Exit" y "S Exit"
         if (id.contains("north_salida")) {
             label = "N Exit";
         } else if (id.contains("south_salida")) {
             label = "S Exit";
         } else {
-            // Para las calles principales este-oeste
             if (id.startsWith("west_left_lane")) label = "West (L)";
             else if (id.startsWith("west_center_lane")) label = "West (C)";
             else if (id.startsWith("west_right_lane")) label = "West (R)";
@@ -586,9 +643,7 @@ public class IntersectionView extends Pane {
             else if (id.startsWith("east_right_lane")) label = "East (R)";
         }
 
-        // Solo crear el texto si label no es null
         if (label != null) {
-            // Intentar extraer el número de segmento si existe
             if (id.contains("segment")) {
                 char segmentNum = '?';
                 if (id.contains("segment1")) segmentNum = '1';
@@ -608,80 +663,137 @@ public class IntersectionView extends Pane {
     }
 
     private void drawScenario2TrafficLights() {
-        // Posicionamos 2 por intersección: uno por banda
-        final int laneHeight = 28;
-        final int laneGap = 6;
-        final int bandGap = 50;
-        final int topBandY = 220;
-        int weCenterY = topBandY + (laneHeight + laneGap); // carril central W→E
-        int ewCenterY = weCenterY + (laneHeight + laneGap) + laneHeight + bandGap + (laneHeight + laneGap); // carril central E→W
-
-        for (Intersection inter : scenarioController.getAllIntersections()) {
-            int leftOfInterX = inter.getPosX() - 14; // entrada para W→E
-            int rightOfInterX = inter.getPosX() + inter.getWidth() + 2; // entrada para E→W
-
-            // Semáforo W→E (arriba, antes de la intersección)
-            drawTrafficLightGlyph(leftOfInterX, weCenterY + laneHeight / 2 - 8);
-            // Semáforo E→W (abajo, antes de la intersección)
-            drawTrafficLightGlyph(rightOfInterX, ewCenterY + laneHeight / 2 - 8);
-        }
-    }
-
-    private void drawTrafficLightGlyph(int x, int y) {
-        Rectangle box = new Rectangle(x, y, 12, 16);
-        box.setArcWidth(4);
-        box.setArcHeight(4);
-        box.setFill(Color.DARKRED);
-        box.setStroke(Color.BLACK);
-        this.getChildren().add(box);
-
-        Text s = new Text(x + 3, y + 12, "S");
-        s.setFill(Color.WHITE);
-        s.setFont(Font.font("Arial", FontWeight.BOLD, 11));
-        this.getChildren().add(s);
-    }
-
-    private void addHighwayRulesPanel() {
-        int x = 50;
-        int y = 40;
-        // REDUCIDO: Panel más pequeño que ocupa solo el espacio necesario
-        Rectangle panel = new Rectangle(x, y, 320, 90); // Reducido de 420x110 a 320x90
-        panel.setArcWidth(8); // Bordes ligeramente menos redondeados
-        panel.setArcHeight(8);
-        panel.setFill(Color.color(0, 0, 0, 0.35));
-        panel.setStroke(Color.WHITE);
-        panel.setStrokeWidth(1);
-        this.getChildren().add(panel);
-
-        Text title = new Text(x + 10, y + 18, "Reglas de Carriles"); // Márgenes más pequeños
-        title.setFill(Color.WHITE);
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 14)); // Fuente ligeramente más pequeña
-        this.getChildren().add(title);
-
-        // Texto más compacto con menos espaciado vertical
-        Text r1 = new Text(x + 10, y + 36, "Izquierdo: Giro izquierda + U-Turn");
-        Text r2 = new Text(x + 10, y + 52, "Central: Solo recto");
-        Text r3 = new Text(x + 10, y + 68, "Derecho: Recto + Giro derecha");
-        for (Text t : new Text[]{r1, r2, r3}) {
-            t.setFill(Color.LIGHTGRAY);
-            t.setFont(Font.font("Arial", FontWeight.NORMAL, 12)); // Fuente más pequeña
-            this.getChildren().add(t);
+        // Add small labels to identify traffic light positions
+        List<TrafficLight> trafficLights = scenarioController.getAllTrafficLights();
+        for (TrafficLight light : trafficLights) {
+            Text label = new Text(light.getPosX() - 10, light.getPosY() - 8, "TL");
+            label.setFill(Color.WHITE);
+            label.setFont(Font.font("Arial", FontWeight.BOLD, 8));
+            this.getChildren().add(label);
         }
     }
 
     private void addTitleScenario2() {
-        Text title = new Text(500, 30, "Escenario 2: Autopista en Dos Direcciones (Oeste–Este)");
+        Text title = new Text(50, 30, "Escenario 2: Autopista con Semáforos Inteligentes");
         title.setFill(Color.WHITE);
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 20));
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 22));
         this.getChildren().add(title);
 
-        Text info = new Text(500, 52, String.format(
-            "Calles: %d | Intersecciones: %d | Semáforos: 6",
+        Text info = new Text(50, 60, String.format(
+            "Calles: %d | Intersecciones: %d | Semáforos: %d",
             scenarioController.getStreetCount(),
-            scenarioController.getIntersectionCount()
+            scenarioController.getIntersectionCount(),
+            scenarioController.getAllTrafficLights().size()
         ));
         info.setFill(Color.LIGHTGRAY);
-        info.setFont(Font.font("Arial", FontWeight.NORMAL, 13));
+        info.setFont(Font.font("Arial", FontWeight.NORMAL, 14));
         this.getChildren().add(info);
+    }
+
+    private void addHighwayRulesPanel() {
+        int panelX = 50;
+        int panelY = 100; // Moved up from 160 to 100
+
+        Rectangle rulesPanel = new Rectangle(panelX, panelY, 320, 80);
+        rulesPanel.setArcWidth(8);
+        rulesPanel.setArcHeight(8);
+        rulesPanel.setFill(Color.color(0, 0, 0, 0.3));
+        rulesPanel.setStroke(Color.LIGHTGRAY);
+        rulesPanel.setStrokeWidth(1);
+        this.getChildren().add(rulesPanel);
+
+        Text rulesTitle = new Text(panelX + 10, panelY + 18, "Reglas de la Autopista:");
+        rulesTitle.setFill(Color.WHITE);
+        rulesTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        this.getChildren().add(rulesTitle);
+
+        String[] rules = {
+            "• Carril Izquierdo: Solo giros a la izquierda y U-turns",
+            "• Carril Central: Solo movimientos rectos",
+            "• Carril Derecho: Recto y giros a la derecha"
+        };
+
+        for (int i = 0; i < rules.length; i++) {
+            Text rule = new Text(panelX + 10, panelY + 38 + (i * 15), rules[i]);
+            rule.setFill(Color.LIGHTGRAY);
+            rule.setFont(Font.font("Arial", FontWeight.NORMAL, 11));
+            this.getChildren().add(rule);
+        }
+    }
+
+    /**
+     * Adds traffic light control panel with pause/resume functionality only
+     */
+    private void addTrafficControlPanel() {
+        int panelX = LaunchView.WIDTH - 210; // Slightly more margin from right edge
+        int panelY = LaunchView.HEIGHT - 100; // Slightly higher position
+
+        // Control panel background - adjusted size
+        Rectangle controlPanel = new Rectangle(panelX, panelY, 190, 70);
+        controlPanel.setArcWidth(8);
+        controlPanel.setArcHeight(8);
+        controlPanel.setFill(Color.color(0, 0, 0, 0.4));
+        controlPanel.setStroke(Color.LIGHTBLUE);
+        controlPanel.setStrokeWidth(1.5);
+        this.getChildren().add(controlPanel);
+
+        // Title
+        Text controlTitle = new Text(panelX + 10, panelY + 18, "Control de Semáforos");
+        controlTitle.setFill(Color.LIGHTBLUE);
+        controlTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        this.getChildren().add(controlTitle);
+
+        // Pause/Resume button - better positioned and sized
+        javafx.scene.control.Button toggleButton = new javafx.scene.control.Button("Pausar");
+        toggleButton.setLayoutX(panelX + 10);
+        toggleButton.setLayoutY(panelY + 25);
+        toggleButton.setPrefWidth(90);
+        toggleButton.setPrefHeight(30);
+        toggleButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; " +
+                             "-fx-font-size: 12px; -fx-padding: 5 15 5 15; " +
+                             "-fx-background-radius: 5;");
+        toggleButton.setOnAction(e -> {
+            if (trafficController != null) {
+                if (trafficController.isRunning()) {
+                    trafficController.stopControl();
+                    toggleButton.setText("Reanudar");
+                    toggleButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; " +
+                                         "-fx-font-size: 12px; -fx-padding: 5 15 5 15; " +
+                                         "-fx-background-radius: 5;");
+                } else {
+                    trafficController.startControl();
+                    toggleButton.setText("Pausar");
+                    toggleButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; " +
+                                         "-fx-font-size: 12px; -fx-padding: 5 15 5 15; " +
+                                         "-fx-background-radius: 5;");
+                }
+            }
+        });
+        this.getChildren().add(toggleButton);
+
+        // Status text positioned to the right of the button
+    }
+
+    /**
+     * Obtiene el controlador de escenario para uso externo
+     */
+    public ScenarioController getScenarioController() {
+        return scenarioController;
+    }
+
+    /**
+     * Gets the traffic controller for external use
+     */
+    public TrafficController getTrafficController() {
+        return trafficController;
+    }
+
+    /**
+     * Cleanup method to stop traffic control when view is disposed
+     */
+    public void cleanup() {
+        if (trafficController != null) {
+            trafficController.stopControl();
+        }
     }
 }

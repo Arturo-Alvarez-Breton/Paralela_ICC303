@@ -155,8 +155,16 @@ public class ScenarioController {
                 weLeftY, weCenterY, weRightY   // Ahora West->East está abajo
         );
 
-        // Traffic lights: only for middle intersections (intersection_2 and intersection_3)
+        // Traffic lights: for all intersections that have traffic flow
         trafficLights = new ArrayList<>();
+        
+        // Intersection 1: Only West->East traffic (top band)
+        String idInter1We = "traffic_light_intersection_1_we";
+        TrafficLight tlInter1We = trafficLightService.createTrafficLight(idInter1We);
+        trafficLights.add(tlInter1We);
+        trafficLightMap.put(idInter1We, tlInter1We);
+        
+        // Intersections 2 and 3: Both directions (existing code)
         for (int i = 1; i <= 2; i++) { // Only intersections 2 and 3 have traffic lights
             String idWe = "traffic_light_intersection_" + (i + 1) + "_we";
             String idEw = "traffic_light_intersection_" + (i + 1) + "_ew";
@@ -167,6 +175,12 @@ public class ScenarioController {
             trafficLightMap.put(idWe, tlWe);
             trafficLightMap.put(idEw, tlEw);
         }
+        
+        // Intersection 4: Only East->West traffic (bottom band)
+        String idInter4Ew = "traffic_light_intersection_4_ew";
+        TrafficLight tlInter4Ew = trafficLightService.createTrafficLight(idInter4Ew);
+        trafficLights.add(tlInter4Ew);
+        trafficLightMap.put(idInter4Ew, tlInter4Ew);
 
         System.out.println("Scenario 2 initialized successfully:");
         System.out.println("- Streets (segments): " + streets.size());
