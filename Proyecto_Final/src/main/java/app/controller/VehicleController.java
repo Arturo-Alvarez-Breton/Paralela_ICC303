@@ -66,6 +66,9 @@ public class VehicleController implements TickController.TickListener {
      */
     @Override
     public void onTick(long tickNumber) {
+        // NUEVO: Actualizar el CollisionManager en cada tick
+        collisionManager.onTick();
+        
         // Spawn automático de vehículos si está habilitado
         if (autoSpawnEnabled && (tickNumber - lastSpawnTick) >= SPAWN_TICK_INTERVAL) {
             spawnRandomVehicle();

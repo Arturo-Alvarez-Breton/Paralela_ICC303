@@ -26,6 +26,10 @@ public class CollisionManager {
     // Control de intersección
     private String vehicleInIntersection = null;
     
+    // NUEVO: Control de espera post-salida de intersección
+    private int postExitWaitTicks = 0;
+    private static final int POST_EXIT_WAIT_DURATION = 10;
+    
     // Colas FIFO para diferentes zonas
     private final Queue<String> intersectionQueue = new LinkedBlockingQueue<>();
     private final Queue<String> waitingZoneQueue = new LinkedBlockingQueue<>();
@@ -191,8 +195,19 @@ public class CollisionManager {
     
     /**
      * Verifica si puede entrar a la intersección usando cola FIFO
+     * NUEVO: Implementa espera de 10 ticks después de que un vehículo salga
      */
     private boolean canEnterIntersectionFIFO(String vehicleId) {
+        // NUEVO: Si estamos en periodo de espera post-salida, bloquear entrada
+        if (postExitWaitTicks > 0) {
+            // Agregar a la cola si no está ya
+            if (!intersectionQueue.contains(vehicleId)) {
+                intersectionQueue.add(vehicleId);
+                System.out.println("Vehículo " + vehicleId + " agregado a cola - esperando " + postExitWaitTicks + " ticks post-salida");
+            }
+            return false;
+        }
+        
         if (vehicleInIntersection == null) {
             // Intersección libre - verificar si es el siguiente en la cola
             if (intersectionQueue.isEmpty() || vehicleId.equals(intersectionQueue.peek())) {
@@ -275,18 +290,48 @@ public class CollisionManager {
     
     /**
      * Notifica que un vehículo salió de la intersección
+     * NUEVO: Inicia el periodo de espera de 10 ticks para el siguiente vehículo
      */
     public void vehicleExitedIntersection(String vehicleId) {
         VehiclePosition pos = vehiclePositions.get(vehicleId);
         if (pos != null && !isInIntersectionZone(pos.x, pos.y)) {
             if (vehicleId.equals(vehicleInIntersection)) {
                 vehicleInIntersection = null;
-                processIntersectionQueue(); // Procesar siguiente en cola
-                System.out.println("Vehículo " + vehicleId + " salió de la intersección - liberando acceso");
+                
+                // NUEVO: Iniciar periodo de espera de 10 ticks
+                postExitWaitTicks = POST_EXIT_WAIT_DURATION;
+                System.out.println("Vehículo " + vehicleId + " salió de la intersección - iniciando espera de " + 
+                                 POST_EXIT_WAIT_DURATION + " ticks para el siguiente");
+                
+                processIntersectionQueue(); // Procesar siguiente en cola (pero estará bloqueado por espera)
             }
         }
     }
     
+    /**
+     * Método que debe ser llamado en cada tick para decrementar el contador de espera
+     * NUEVO: Controla el tiempo de espera post-salida de intersección
+     */
+    public void onTick() {
+        if (postExitWaitTicks > 0) {
+            postExitWaitTicks--;
+            if (postExitWaitTicks == 0) {
+                System.out.println("Periodo de espera completado - siguientes vehículos pueden avanzar");
+            }
+        }
+    }
+    
+    /**
+     * Obtiene el estado actual de espera
+     */
+    public boolean isInPostExitWait() {
+        return postExitWaitTicks > 0;
+    }
+    
+    public int getPostExitWaitTicks() {
+        return postExitWaitTicks;
+    }
+
     // Métodos de compatibilidad para VehicleController
     public void removeVehicleFromTracking(String vehicleId) {
         unregisterVehicle(vehicleId);
