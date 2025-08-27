@@ -223,19 +223,19 @@ public class IntersectionView extends Pane {
         if (entrada) {
             // Calles de entrada (azules) - según convención de posición
             switch (dir) {
-                case "north": return "↓ SOUTH";  // Lado superior: azul va hacia el sur
-                case "south": return "↑ NORTH";  // Lado inferior: azul va hacia el norte
-                case "east":  return "← WEST";   // Lado derecho: azul va hacia el oeste
-                case "west":  return "→ EAST";   // Lado izquierdo: azul va hacia el este
+                case "north": return "SOUTH";  // Lado superior: azul va hacia el sur
+                case "south": return "NORTH";  // Lado inferior: azul va hacia el norte
+                case "east":  return "WEST";   // Lado derecho: azul va hacia el oeste
+                case "west":  return "EAST";   // Lado izquierdo: azul va hacia el este
                 default: break;
             }
         } else if (salida) {
             // Calles de salida (rojas) - según convención de posición
             switch (dir) {
-                case "north": return "↑ NORTH";  // Lado superior: rojo va hacia el norte
-                case "south": return "↓ SOUTH";  // Lado inferior: rojo va hacia el sur
-                case "east":  return "→ EAST";   // Lado derecho: rojo va hacia el este
-                case "west":  return "← WEST";   // Lado izquierdo: rojo va hacia el oeste
+                case "north": return "NORTH";  // Lado superior: rojo va hacia el norte
+                case "south": return "SOUTH";  // Lado inferior: rojo va hacia el sur
+                case "east":  return "EAST";   // Lado derecho: rojo va hacia el este
+                case "west":  return "WEST";   // Lado izquierdo: rojo va hacia el oeste
                 default: break;
             }
         }

@@ -141,7 +141,8 @@ public class VehicleController implements TickController.TickListener {
         vehiclePaths.put(vehicle.getId(), path);
         
         // Registrar en el collision manager con dirección de spawn
-        collisionManager.registerVehicle(vehicle.getId(), path.getStartX(), path.getStartY(), spawnDirection);
+    boolean isEmergency = vehicle.getType() == VehicleTypeEnum.EMERGENCY;
+    collisionManager.registerVehicle(vehicle.getId(), path.getStartX(), path.getStartY(), spawnDirection, isEmergency);
         
         // Agregar a la escena
         scene.getChildren().add(vehicleView);

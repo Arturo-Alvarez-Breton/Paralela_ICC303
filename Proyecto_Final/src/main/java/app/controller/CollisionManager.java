@@ -41,6 +41,13 @@ public class CollisionManager {
     private final Map<String, VehiclePosition> vehiclePositions = new ConcurrentHashMap<>();
     private final Map<String, Long> vehicleArrivalTime = new ConcurrentHashMap<>();
     private long arrivalCounter = 0;
+    // === PRIORIDAD DE EMERGENCIA ===
+    private final Map<String, Boolean> emergencyFlag = new ConcurrentHashMap<>(); // vehicleId -> es emergencia
+    private final Map<String, String> vehicleLane = new ConcurrentHashMap<>(); // vehicleId -> lane (north/south/east/west)
+    private final Map<String, Integer> emergencyCountPerLane = new ConcurrentHashMap<>(); // lane -> count emergencia
+    // Cola de prioridad de lanes con emergencia por orden de llegada del PRIMER vehículo de emergencia
+    private final PriorityQueue<EmergencyLane> emergencyLaneQueue = new PriorityQueue<>(Comparator.comparingLong(e -> e.firstEmergencyArrivalOrder));
+    private final Map<String, EmergencyLane> emergencyLaneIndex = new HashMap<>(); // lane -> EmergencyLane existente
     
     /**
      * Registra un vehículo para tracking de colisiones con entrada de spawn segura
@@ -61,14 +68,32 @@ public class CollisionManager {
      * Registra un vehículo para tracking de colisiones
      */
     public void registerVehicle(String vehicleId, double x, double y, String spawnDirection) {
+        registerVehicle(vehicleId, x, y, spawnDirection, false);
+    }
+
+    /**
+     * Registro extendido con bandera de emergencia
+     */
+    public void registerVehicle(String vehicleId, double x, double y, String spawnDirection, boolean isEmergency) {
         vehiclePositions.put(vehicleId, new VehiclePosition(x, y));
-        vehicleArrivalTime.put(vehicleId, arrivalCounter++);
-        
-        // Inicializar cola de spawn si no existe
+        long order = arrivalCounter++;
+        vehicleArrivalTime.put(vehicleId, order);
+        vehicleLane.put(vehicleId, spawnDirection);
+        emergencyFlag.put(vehicleId, isEmergency);
         spawnQueues.computeIfAbsent(spawnDirection, k -> new LinkedBlockingQueue<>());
-        
-        System.out.println("Vehículo registrado en CollisionManager: " + vehicleId + 
-                          " en (" + x + ", " + y + ") dirección: " + spawnDirection);
+
+        if (isEmergency) {
+            emergencyCountPerLane.merge(spawnDirection, 1, Integer::sum);
+            // Si es la primera emergencia de ese carril, agregar a cola prioritaria
+            if (!emergencyLaneIndex.containsKey(spawnDirection)) {
+                EmergencyLane el = new EmergencyLane(spawnDirection, order);
+                emergencyLaneQueue.add(el);
+                emergencyLaneIndex.put(spawnDirection, el);
+                System.out.println("[EMERGENCIA] Nuevo carril prioritario: " + spawnDirection + " (orden " + order + ")");
+            }
+        }
+        System.out.println("Vehículo registrado en CollisionManager: " + vehicleId +
+                " en (" + x + ", " + y + ") dirección: " + spawnDirection + (isEmergency ? " [EMERGENCY]" : ""));
     }
     
     /**
@@ -95,6 +120,20 @@ public class CollisionManager {
     public void unregisterVehicle(String vehicleId) {
         vehiclePositions.remove(vehicleId);
         vehicleArrivalTime.remove(vehicleId);
+        Boolean wasEmergency = emergencyFlag.remove(vehicleId);
+        String lane = vehicleLane.remove(vehicleId);
+        if (wasEmergency != null && wasEmergency && lane != null) {
+            emergencyCountPerLane.merge(lane, -1, Integer::sum);
+            if (emergencyCountPerLane.getOrDefault(lane, 0) <= 0) {
+                emergencyCountPerLane.remove(lane);
+                // Retirar lane de la cola prioritaria
+                EmergencyLane el = emergencyLaneIndex.remove(lane);
+                if (el != null) {
+                    emergencyLaneQueue.remove(el);
+                    System.out.println("[EMERGENCIA] Carril deja de tener prioridad: " + lane);
+                }
+            }
+        }
         
         // Remover de todas las colas
         intersectionQueue.remove(vehicleId);
@@ -198,34 +237,52 @@ public class CollisionManager {
      * NUEVO: Implementa espera de 10 ticks después de que un vehículo salga
      */
     private boolean canEnterIntersectionFIFO(String vehicleId) {
-        // NUEVO: Si estamos en periodo de espera post-salida, bloquear entrada
-        if (postExitWaitTicks > 0) {
-            // Agregar a la cola si no está ya
+        String lane = vehicleLane.get(vehicleId);
+        boolean emergencyActive = !emergencyLaneQueue.isEmpty();
+        String topEmergencyLane = emergencyActive ? emergencyLaneQueue.peek().lane : null;
+
+        // Si hay emergencia activa, ignorar periodo post-salida para prioridad
+        if (!emergencyActive && postExitWaitTicks > 0) {
             if (!intersectionQueue.contains(vehicleId)) {
                 intersectionQueue.add(vehicleId);
                 System.out.println("Vehículo " + vehicleId + " agregado a cola - esperando " + postExitWaitTicks + " ticks post-salida");
             }
             return false;
         }
-        
+
+        // Intersección libre
         if (vehicleInIntersection == null) {
-            // Intersección libre - verificar si es el siguiente en la cola
-            if (intersectionQueue.isEmpty() || vehicleId.equals(intersectionQueue.peek())) {
-                vehicleInIntersection = vehicleId;
-                intersectionQueue.remove(vehicleId); // Remover de la cola si estaba
-                System.out.println("Vehículo " + vehicleId + " entra a la intersección (FIFO)");
-                return true;
+            if (emergencyActive) {
+                if (lane != null && lane.equals(topEmergencyLane)) {
+                    int remainingEmergencies = emergencyCountPerLane.getOrDefault(lane, 0);
+                    boolean isEmergency = emergencyFlag.getOrDefault(vehicleId, false);
+                    // Mientras queden ambulancias en ese carril, solo ellas pueden entrar
+                    if (remainingEmergencies > 0 && !isEmergency) {
+                        // No permitir todavía a vehículo normal del carril prioritario
+                    } else {
+                        vehicleInIntersection = vehicleId;
+                        intersectionQueue.remove(vehicleId);
+                        System.out.println("[EMERGENCIA] Vehículo " + vehicleId + " entra (carril " + lane + ")" + (isEmergency?" [EMERGENCY]":""));
+                        return true;
+                    }
+                }
+            } else {
+                if (intersectionQueue.isEmpty() || vehicleId.equals(intersectionQueue.peek())) {
+                    vehicleInIntersection = vehicleId;
+                    intersectionQueue.remove(vehicleId);
+                    System.out.println("Vehículo " + vehicleId + " entra a la intersección (FIFO)");
+                    return true;
+                }
             }
         } else if (vehicleId.equals(vehicleInIntersection)) {
-            // Ya está en la intersección
-            return true;
+            return true; // ya dentro
         }
-        
-        // Agregar a la cola si no está ya
+
+        // Añadir a cola si no está
         if (!intersectionQueue.contains(vehicleId)) {
             intersectionQueue.add(vehicleId);
-            System.out.println("Vehículo " + vehicleId + " agregado a cola de intersección (posición " + 
-                              getQueuePosition(intersectionQueue, vehicleId) + ")");
+            System.out.println("Vehículo " + vehicleId + (emergencyActive ? " (espera prioridad emergencia)" : "") +
+                    " agregado a cola intersección pos " + getQueuePosition(intersectionQueue, vehicleId));
         }
         return false;
     }
@@ -297,11 +354,14 @@ public class CollisionManager {
         if (pos != null && !isInIntersectionZone(pos.x, pos.y)) {
             if (vehicleId.equals(vehicleInIntersection)) {
                 vehicleInIntersection = null;
-                
-                // NUEVO: Iniciar periodo de espera de 10 ticks
-                postExitWaitTicks = POST_EXIT_WAIT_DURATION;
-                System.out.println("Vehículo " + vehicleId + " salió de la intersección - iniciando espera de " + 
-                                 POST_EXIT_WAIT_DURATION + " ticks para el siguiente");
+                // Si no hay emergencias activas, aplicar espera; de lo contrario, liberar inmediatamente
+                if (emergencyLaneQueue.isEmpty()) {
+                    postExitWaitTicks = POST_EXIT_WAIT_DURATION;
+                    System.out.println("Vehículo " + vehicleId + " salió - espera " + POST_EXIT_WAIT_DURATION + " ticks");
+                } else {
+                    postExitWaitTicks = 0;
+                    System.out.println("Vehículo " + vehicleId + " salió - prioridad emergencia continua, sin espera");
+                }
                 
                 processIntersectionQueue(); // Procesar siguiente en cola (pero estará bloqueado por espera)
             }
@@ -347,6 +407,11 @@ public class CollisionManager {
         vehicleInIntersection = null;
         intersectionQueue.clear();
         waitingZoneQueue.clear();
+    emergencyLaneQueue.clear();
+    emergencyLaneIndex.clear();
+    emergencyCountPerLane.clear();
+    emergencyFlag.clear();
+    vehicleLane.clear();
         System.out.println("Intersección liberada forzosamente");
     }
     
@@ -392,6 +457,11 @@ public class CollisionManager {
         System.out.println("Cola de intersección (" + intersectionQueue.size() + "): " + intersectionQueue);
         System.out.println("Cola de zona de espera (" + waitingZoneQueue.size() + "): " + waitingZoneQueue);
         System.out.println("Vehículos tracked: " + vehiclePositions.size());
+        if (!emergencyLaneQueue.isEmpty()) {
+            System.out.print("Lanes emergencia prioridad: [");
+            emergencyLaneQueue.forEach(el -> System.out.print(el.lane + "(first=" + el.firstEmergencyArrivalOrder + ") "));
+            System.out.println("]");
+        }
         
         for (Map.Entry<String, VehiclePosition> entry : vehiclePositions.entrySet()) {
             VehiclePosition pos = entry.getValue();
@@ -412,5 +482,23 @@ public class CollisionManager {
             }
         }
         System.out.println("===============================");
+    }
+    
+    /**
+     * Representa un carril con vehículos de emergencia y su orden de prioridad.
+     */
+    private static class EmergencyLane {
+        final String lane;
+        final long firstEmergencyArrivalOrder;
+        EmergencyLane(String lane, long order) {
+            this.lane = lane;
+            this.firstEmergencyArrivalOrder = order;
+        }
+        @Override
+        public boolean equals(Object o) { return o instanceof EmergencyLane el && el.lane.equals(this.lane); }
+        @Override
+        public int hashCode() { return lane.hashCode(); }
+        @Override
+        public String toString() { return lane + "#" + firstEmergencyArrivalOrder; }
     }
 }
