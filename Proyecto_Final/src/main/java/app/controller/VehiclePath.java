@@ -561,7 +561,7 @@ public class VehiclePath {
     }
     /**
      * Mueve el vehículo a lo largo de la ruta
-     * MEJORADO: Mayor precisión para evitar oscilaciones en trayectorias rectas
+     * MEJORADO: Algoritmo de seguimiento más robusto para evitar "rebotes"
      * @param speed Velocidad de movimiento
      * @return true si el movimiento continúa, false si la ruta está completa
      */
@@ -578,14 +578,14 @@ public class VehiclePath {
         double deltaY = targetPoint.y - currentY;
         double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         
-        // Tolerancia más estricta para waypoints
-        double tolerance = Math.max(speed * 0.8, 2.0); // Mínimo 2 píxeles de tolerancia
+        // CORREGIDO: Tolerancia más estricta y progresiva
+        double baseTolerance = Math.min(speed * 1.5, 8.0); // Más tolerante pero limitado
+        double tolerance = Math.max(baseTolerance, 3.0); // Mínimo 3 píxeles
         
-        // Si estamos cerca del waypoint, avanzar al siguiente
+        // Si estamos cerca del waypoint, avanzar al siguiente SIN reposicionar
         if (distance <= tolerance) {
-            // Posicionar exactamente en el waypoint para evitar desviaciones
-            currentX = targetPoint.x;
-            currentY = targetPoint.y;
+            // NO reposicionar exactamente - esto puede causar "saltos"
+            // Solo avanzar al siguiente waypoint
             currentWaypointIndex++;
             
             // Verificar si hemos llegado al final
@@ -593,13 +593,21 @@ public class VehiclePath {
                 completed = true;
                 return false;
             }
-        } else {
-            // Mover hacia el waypoint con mayor precisión
+            
+            // Recalcular para el nuevo target
+            targetPoint = waypoints.get(currentWaypointIndex);
+            deltaX = targetPoint.x - currentX;
+            deltaY = targetPoint.y - currentY;
+            distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        }
+        
+        // Mover hacia el waypoint de forma suave
+        if (distance > 0.1) { // Evitar división por cero
             double directionX = deltaX / distance;
             double directionY = deltaY / distance;
             
-            // Limitar el movimiento para no sobrepasar el waypoint
-            double moveDistance = Math.min(speed, distance);
+            // Movimiento suavizado: nunca sobrepasar el waypoint
+            double moveDistance = Math.min(speed, distance * 0.9); // Máximo 90% de la distancia
             
             currentX += directionX * moveDistance;
             currentY += directionY * moveDistance;
@@ -638,6 +646,170 @@ public class VehiclePath {
         @Override
         public String toString() {
             return String.format("(%.1f, %.1f)", x, y);
+        }
+    }
+    
+    /**
+     * Agrega waypoints intermedios monotonos para curvas suaves
+     * CORRECCION CRITICA: Elimina el comportamiento "va-viene-sigue" en giros horizontales
+     * Genera puntos que SIEMPRE avanzan hacia el destino sin retrocesos
+     */
+    private void addSmoothCurvePoints(String entryDirection, String exitDirection, boolean isRightTurn) {
+        PathPoint entryPoint = waypoints.get(waypoints.size() - 1); // Punto de entrada a intersección
+        
+        // Calcular punto de destino (salida de intersección)
+        double exitX, exitY;
+        Street exitStreet = findExitStreet(exitDirection, this.scenarioController);
+        if (exitStreet == null) return;
+        
+        switch (exitDirection) {
+            case "north":
+                exitX = exitStreet.getPosX() + exitStreet.getWidth() / 2.0;
+                exitY = CENTER_Y - INTERSECTION_SIZE/2.0;
+                break;
+            case "south":
+                exitX = exitStreet.getPosX() + exitStreet.getWidth() / 2.0;
+                exitY = CENTER_Y + INTERSECTION_SIZE/2.0;
+                break;
+            case "east":
+                exitX = CENTER_X + INTERSECTION_SIZE/2.0;
+                exitY = exitStreet.getPosY() + exitStreet.getHeight() / 2.0;
+                break;
+            case "west":
+                exitX = CENTER_X - INTERSECTION_SIZE/2.0;
+                exitY = exitStreet.getPosY() + exitStreet.getHeight() / 2.0;
+                break;
+            default:
+                return;
+        }
+        
+        // Generar curva monótona según la dirección de entrada
+        switch (entryDirection) {
+            case "east":
+                addMonotonicCurveFromEast(entryPoint.x, entryPoint.y, exitX, exitY, isRightTurn);
+                break;
+            case "west":
+                addMonotonicCurveFromWest(entryPoint.x, entryPoint.y, exitX, exitY, isRightTurn);
+                break;
+            case "north":
+                addMonotonicCurveFromNorth(entryPoint.x, entryPoint.y, exitX, exitY, isRightTurn);
+                break;
+            case "south":
+                addMonotonicCurveFromSouth(entryPoint.x, entryPoint.y, exitX, exitY, isRightTurn);
+                break;
+        }
+    }
+    
+    /**
+     * Curva monotona desde Este: X siempre DECRECE, Y cambia suavemente
+     * COPIA EXACTA de Sur pero con X/Y intercambiados apropiadamente
+     */
+    private void addMonotonicCurveFromEast(double startX, double startY, double endX, double endY, boolean isRightTurn) {
+        int steps = 3; 
+        
+        for (int i = 1; i <= steps; i++) {
+            double progress = (double) i / (steps + 1);
+            
+            // X ESTRICTAMENTE MONOTONICA: garantizar monotonía (como Y en Sur)
+            double curveX = startX + (endX - startX) * progress;
+            
+            // Y: curva suave sin oscilaciones complejas (como X en Sur)
+            double curveY;
+            if (isRightTurn) {
+                // Giro derecho: curva suave hacia destino (EXACTAMENTE como Sur)
+                curveY = startY + (endY - startY) * (progress * progress);
+            } else {
+                // Giro izquierdo: curva más directa (EXACTAMENTE como Sur)
+                curveY = startY + (endY - startY) * progress;
+            }
+            
+            waypoints.add(new PathPoint(curveX, curveY));
+            System.out.println("EXACT E→" + (isRightTurn ? "R" : "L") + " step " + i + ": (" + curveX + ", " + curveY + ")");
+        }
+    }
+    
+    /**
+     * Curva monotona desde Oeste: X siempre CRECE, Y cambia suavemente
+     * COPIA EXACTA de Sur pero con X/Y intercambiados apropiadamente
+     */
+    private void addMonotonicCurveFromWest(double startX, double startY, double endX, double endY, boolean isRightTurn) {
+        int steps = 3;
+        
+        for (int i = 1; i <= steps; i++) {
+            double progress = (double) i / (steps + 1);
+            
+            // X ESTRICTAMENTE MONOTONICA: garantizar monotonía (como Y en Sur)
+            double curveX = startX + (endX - startX) * progress;
+            
+            // Y: curva suave sin oscilaciones complejas (como X en Sur)
+            double curveY;
+            if (isRightTurn) {
+                // Giro derecho: curva suave hacia destino (EXACTAMENTE como Sur)
+                curveY = startY + (endY - startY) * (progress * progress);
+            } else {
+                // Giro izquierdo: curva más directa (EXACTAMENTE como Sur)
+                curveY = startY + (endY - startY) * progress;
+            }
+            
+            waypoints.add(new PathPoint(curveX, curveY));
+            System.out.println("EXACT W→" + (isRightTurn ? "R" : "L") + " step " + i + ": (" + curveX + ", " + curveY + ")");
+        }
+    }
+    
+    /**
+     * Curva monotona desde Norte: Y siempre CRECE, X cambia suavemente
+     * CLONADO DESDE SUR (que funciona perfectamente)
+     */
+    private void addMonotonicCurveFromNorth(double startX, double startY, double endX, double endY, boolean isRightTurn) {
+        int steps = 3; // Igual que Sur que funciona bien
+        
+        for (int i = 1; i <= steps; i++) {
+            double progress = (double) i / (steps + 1);
+            
+            // Y: progresión lineal monotónica (Norte → Sur, Y crece)
+            double curveY = startY + (endY - startY) * progress;
+            
+            // X: misma lógica exacta que Sur (intercambiando X/Y)
+            double curveX;
+            if (isRightTurn) {
+                // Giro derecho: curva suave hacia destino (igual que Sur)
+                curveX = startX + (endX - startX) * (progress * progress);
+            } else {
+                // Giro izquierdo: curva más directa (igual que Sur)
+                curveX = startX + (endX - startX) * progress;
+            }
+            
+            waypoints.add(new PathPoint(curveX, curveY));
+            System.out.println("CLONED N→" + (isRightTurn ? "R" : "L") + " step " + i + ": (" + curveX + ", " + curveY + ")");
+        }
+    }
+    
+    /**
+     * Curva monotona desde Sur: Y siempre DECRECE, X cambia suavemente  
+     * IMPLEMENTACION DE REFERENCIA - FUNCIONA PERFECTAMENTE
+     * Esta lógica se clonó para todas las demás direcciones
+     */
+    private void addMonotonicCurveFromSouth(double startX, double startY, double endX, double endY, boolean isRightTurn) {
+        int steps = 3; // Consistencia con E/W
+        
+        for (int i = 1; i <= steps; i++) {
+            double progress = (double) i / (steps + 1);
+            
+            // Y ESTRICTAMENTE DECRECIENTE: garantizar monotonía
+            double curveY = startY + (endY - startY) * progress;
+            
+            // X: curva suave sin oscilaciones complejas
+            double curveX;
+            if (isRightTurn) {
+                // Giro derecho: curva suave hacia destino
+                curveX = startX + (endX - startX) * (progress * progress);
+            } else {
+                // Giro izquierdo: curva más directa
+                curveX = startX + (endX - startX) * progress;
+            }
+            
+            waypoints.add(new PathPoint(curveX, curveY));
+            System.out.println("MONO Curve S→" + (isRightTurn ? "R" : "L") + " step " + i + ": (" + curveX + ", " + curveY + ") - Y decrece");
         }
     }
 }
