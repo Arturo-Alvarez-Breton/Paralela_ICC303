@@ -316,13 +316,15 @@ public class IntersectionView extends Pane {
         int distanceFromIntersection = 35; // Distancia desde el borde de la intersección
         
         // Señal PARE - Entrada NORTE (calle azul que viene del norte hacia la intersección)
-        double northStopX = centerX + 20; // Centro del carril de entrada norte
+    // Ajuste: la entrada norte está en el carril izquierdo (centerX - 20)
+    double northStopX = centerX - 20; // Centro real del carril de entrada norte
         double northStopY = centerY - intersectionSize/2.0 - distanceFromIntersection;
         StopSignView northStop = StopSignView.createForDirection(northStopX, northStopY, stopSignSize, "north");
         this.getChildren().add(northStop);
         
         // Señal PARE - Entrada SUR (calle azul que viene del sur hacia la intersección)
-        double southStopX = centerX - 20; // Centro del carril de entrada sur
+    // Ajuste: la entrada sur está en el carril derecho (centerX + 20)
+    double southStopX = centerX + 20; // Centro real del carril de entrada sur
         double southStopY = centerY + intersectionSize/2.0 + distanceFromIntersection;
         StopSignView southStop = StopSignView.createForDirection(southStopX, southStopY, stopSignSize, "south");
         this.getChildren().add(southStop);
