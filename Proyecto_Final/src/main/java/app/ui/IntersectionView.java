@@ -2,9 +2,13 @@ package app.ui;
 
 import app.controller.ScenarioController;
 import app.controller.TrafficController;
+import app.controller.VehicleController;
+import app.controller.TickController;
 import app.model.Street;
 import app.model.Intersection;
 import app.model.TrafficLight;
+import app.model.enums.DirectionEnum;
+import app.model.enums.VehicleTypeEnum;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -32,6 +36,10 @@ public class IntersectionView extends Pane {
     // Traffic light management for Scenario 2
     private TrafficController trafficController;
     private final List<TrafficLightView> trafficLightViews;
+    
+    // Vehicle management for Scenario 1
+    private VehicleController vehicleController;
+    private TickController tickController;
 
     public IntersectionView(int scenarioNumber) {
         this.scenarioNumber = scenarioNumber;
@@ -43,6 +51,11 @@ public class IntersectionView extends Pane {
         // Initialize traffic control for Scenario 2
         if (scenarioNumber == 2) {
             initializeTrafficControl();
+        }
+        
+        // Initialize vehicle control for Scenario 1
+        if (scenarioNumber == 1) {
+            initializeVehicleControl();
         }
     }
 
@@ -73,7 +86,9 @@ public class IntersectionView extends Pane {
             // Escenario 1
             drawAllStreets();
             drawCentralIntersection();
+            drawStopSigns(); // Agregar señales de PARE
             addTitleScenario1();
+            addVehicleControlPanel(); // Agregar controles de vehículos
             addBackButton();
         }
     }
@@ -197,7 +212,7 @@ public class IntersectionView extends Pane {
     }
 
     /**
-     * Obtiene la etiqueta apropiada para cada calle
+     * Obtiene la etiqueta apropiada para cada calle según la convención
      */
     private String getStreetLabel(Street street) {
         String id = street.getId();
@@ -205,12 +220,22 @@ public class IntersectionView extends Pane {
         boolean entrada = id.contains("entrada");
         boolean salida = id.contains("salida");
 
-        if (entrada || salida) {
+        if (entrada) {
+            // Calles de entrada (azules) - según convención de posición
             switch (dir) {
-                case "north": return "↑ NORTH";
-                case "south": return "↓ SOUTH";
-                case "east":  return "→ EAST";
-                case "west":  return "← WEST";
+                case "north": return "↓ SOUTH";  // Lado superior: azul va hacia el sur
+                case "south": return "↑ NORTH";  // Lado inferior: azul va hacia el norte
+                case "east":  return "← WEST";   // Lado derecho: azul va hacia el oeste
+                case "west":  return "→ EAST";   // Lado izquierdo: azul va hacia el este
+                default: break;
+            }
+        } else if (salida) {
+            // Calles de salida (rojas) - según convención de posición
+            switch (dir) {
+                case "north": return "↑ NORTH";  // Lado superior: rojo va hacia el norte
+                case "south": return "↓ SOUTH";  // Lado inferior: rojo va hacia el sur
+                case "east":  return "→ EAST";   // Lado derecho: rojo va hacia el este
+                case "west":  return "← WEST";   // Lado izquierdo: rojo va hacia el oeste
                 default: break;
             }
         }
@@ -280,6 +305,335 @@ public class IntersectionView extends Pane {
         this.getChildren().add(intersectionText);
     }
 
+    /**
+     * Dibuja las señales de PARE en las calles de entrada (azules) antes de la intersección
+     */
+    private void drawStopSigns() {
+        int centerX = app.service.StreetService.INTERSECTION_CENTER_X;
+        int centerY = app.service.StreetService.INTERSECTION_CENTER_Y;
+        int intersectionSize = 80;
+        int stopSignSize = 20; // Tamaño de las señales de PARE
+        int distanceFromIntersection = 35; // Distancia desde el borde de la intersección
+        
+        // Señal PARE - Entrada NORTE (calle azul que viene del norte hacia la intersección)
+        double northStopX = centerX + 20; // Centro del carril de entrada norte
+        double northStopY = centerY - intersectionSize/2.0 - distanceFromIntersection;
+        StopSignView northStop = StopSignView.createForDirection(northStopX, northStopY, stopSignSize, "north");
+        this.getChildren().add(northStop);
+        
+        // Señal PARE - Entrada SUR (calle azul que viene del sur hacia la intersección)
+        double southStopX = centerX - 20; // Centro del carril de entrada sur
+        double southStopY = centerY + intersectionSize/2.0 + distanceFromIntersection;
+        StopSignView southStop = StopSignView.createForDirection(southStopX, southStopY, stopSignSize, "south");
+        this.getChildren().add(southStop);
+        
+        // Señal PARE - Entrada ESTE (calle azul que viene del este hacia la intersección)
+        double eastStopX = centerX - intersectionSize/2.0 - distanceFromIntersection;
+        double eastStopY = centerY + 20; // Centro del carril de entrada este
+        StopSignView eastStop = StopSignView.createForDirection(eastStopX, eastStopY, stopSignSize, "east");
+        this.getChildren().add(eastStop);
+        
+        // Señal PARE - Entrada OESTE (calle azul que viene del oeste hacia la intersección)
+        double westStopX = centerX + intersectionSize/2.0 + distanceFromIntersection;
+        double westStopY = centerY - 20; // Centro del carril de entrada oeste
+        StopSignView westStop = StopSignView.createForDirection(westStopX, westStopY, stopSignSize, "west");
+        this.getChildren().add(westStop);
+        
+        System.out.println("Señales de PARE agregadas en las 4 entradas de la intersección");
+    }
+    
+    /**
+     * Inicializa el sistema de control de vehículos para el Escenario 1
+     */
+    private void initializeVehicleControl() {
+        this.tickController = new TickController();
+        this.vehicleController = new VehicleController(this, scenarioController, tickController);
+        System.out.println("Sistema de control de vehículos y ticks inicializado");
+    }
+    
+    /**
+     * Agrega el panel de control de vehículos
+     */
+    private void addVehicleControlPanel() {
+        int panelX = LaunchView.WIDTH - 250;
+        int panelY = 100;
+        int panelWidth = 250;
+        int panelHeight = 300;
+        
+        // Panel de fondo
+        Rectangle controlPanel = new Rectangle(panelX, panelY, panelWidth, panelHeight);
+        controlPanel.setArcWidth(8);
+        controlPanel.setArcHeight(8);
+        controlPanel.setFill(Color.color(0, 0, 0, 0.4));
+        controlPanel.setStroke(Color.LIGHTBLUE);
+        controlPanel.setStrokeWidth(1.5);
+        this.getChildren().add(controlPanel);
+        
+        // Título del panel
+        Text controlTitle = new Text(panelX + 10, panelY + 20, "Control de Vehículos");
+        controlTitle.setFill(Color.LIGHTBLUE);
+        controlTitle.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        this.getChildren().add(controlTitle);
+        
+        // Botón Play/Pause simulación
+        javafx.scene.control.Button playPauseButton = new javafx.scene.control.Button("Iniciar");
+        playPauseButton.setLayoutX(panelX + 10);
+        playPauseButton.setLayoutY(panelY + 30);
+        playPauseButton.setPrefWidth(100);
+        playPauseButton.setPrefHeight(30);
+        playPauseButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; " +
+                                "-fx-font-size: 12px; -fx-background-radius: 5;");
+        
+        playPauseButton.setOnAction(e -> {
+            if (tickController.isRunning()) {
+                tickController.pause();
+                playPauseButton.setText("Reanudar");
+                playPauseButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; " +
+                                        "-fx-font-size: 12px; -fx-background-radius: 5;");
+            } else if (tickController.isPaused()) {
+                tickController.resume();
+                playPauseButton.setText("Pausar");
+                playPauseButton.setStyle("-fx-background-color: #F44336; -fx-text-fill: white; " +
+                                        "-fx-font-size: 12px; -fx-background-radius: 5;");
+            } else {
+                tickController.start();
+                playPauseButton.setText("Pausar");
+                playPauseButton.setStyle("-fx-background-color: #F44336; -fx-text-fill: white; " +
+                                        "-fx-font-size: 12px; -fx-background-radius: 5;");
+            }
+        });
+        this.getChildren().add(playPauseButton);
+        
+        // Botón Auto-spawn
+        javafx.scene.control.Button autoSpawnButton = new javafx.scene.control.Button("Auto OFF");
+        autoSpawnButton.setLayoutX(panelX + 120);
+        autoSpawnButton.setLayoutY(panelY + 30);
+        autoSpawnButton.setPrefWidth(100);
+        autoSpawnButton.setPrefHeight(30);
+        autoSpawnButton.setStyle("-fx-background-color: #9E9E9E; -fx-text-fill: white; " +
+                               "-fx-font-size: 12px; -fx-background-radius: 5;");
+        
+        autoSpawnButton.setOnAction(e -> {
+            boolean newState = !vehicleController.isAutoSpawnEnabled();
+            vehicleController.setAutoSpawn(newState);
+            
+            if (newState) {
+                autoSpawnButton.setText("Auto ON");
+                autoSpawnButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; " +
+                                        "-fx-font-size: 12px; -fx-background-radius: 5;");
+            } else {
+                autoSpawnButton.setText("Auto OFF");
+                autoSpawnButton.setStyle("-fx-background-color: #9E9E9E; -fx-text-fill: white; " +
+                                        "-fx-font-size: 12px; -fx-background-radius: 5;");
+            }
+        });
+        this.getChildren().add(autoSpawnButton);
+        
+        // Sección de creación manual
+        Text manualTitle = new Text(panelX + 10, panelY + 80, "Crear Vehículo Manual:");
+        manualTitle.setFill(Color.WHITE);
+        manualTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        this.getChildren().add(manualTitle);
+        
+        // Etiqueta "Desde:"
+        Text fromLabel = new Text(panelX + 10, panelY + 105, "Desde:");
+        fromLabel.setFill(Color.LIGHTGRAY);
+        fromLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
+        this.getChildren().add(fromLabel);
+        
+        // Selector de entrada
+        javafx.scene.control.ComboBox<String> entrySelector = new javafx.scene.control.ComboBox<>();
+        entrySelector.getItems().addAll("Norte", "Sur", "Este", "Oeste");
+        entrySelector.setValue("Sur");
+        entrySelector.setLayoutX(panelX + 10);
+        entrySelector.setLayoutY(panelY + 110);
+        entrySelector.setPrefWidth(100);
+        this.getChildren().add(entrySelector);
+        
+        // Etiqueta "Hacia:"
+        Text toLabel = new Text(panelX + 120, panelY + 105, "Hacia:");
+        toLabel.setFill(Color.LIGHTGRAY);
+        toLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
+        this.getChildren().add(toLabel);
+        
+        // Selector de dirección
+        javafx.scene.control.ComboBox<String> directionSelector = new javafx.scene.control.ComboBox<>();
+        directionSelector.getItems().addAll("Recto", "Izquierda", "Derecha", "U-Turn");
+        directionSelector.setValue("Recto");
+        directionSelector.setLayoutX(panelX + 120);
+        directionSelector.setLayoutY(panelY + 110);
+        directionSelector.setPrefWidth(100);
+        this.getChildren().add(directionSelector);
+        
+        // Texto explicativo de la ruta
+        Text routeExplanation = new Text(panelX + 10, panelY + 135, "");
+        routeExplanation.setFill(Color.YELLOW);
+        routeExplanation.setFont(Font.font("Arial", FontWeight.NORMAL, 9));
+        this.getChildren().add(routeExplanation);
+        
+        // Actualizar explicación cuando cambian los selectores
+        Runnable updateExplanation = () -> {
+            String from = entrySelector.getValue();
+            String direction = directionSelector.getValue();
+            String to = calculateDestination(from, direction);
+            routeExplanation.setText("Ruta: " + from + " -> " + to);
+        };
+        
+        entrySelector.setOnAction(e -> updateExplanation.run());
+        directionSelector.setOnAction(e -> updateExplanation.run());
+        
+        // Inicializar explicación
+        updateExplanation.run();
+        
+        // Botones de tipo de vehículo
+        javafx.scene.control.Button normalButton = new javafx.scene.control.Button("Auto Normal");
+        normalButton.setLayoutX(panelX + 10);
+        normalButton.setLayoutY(panelY + 145);
+        normalButton.setPrefWidth(100);
+        normalButton.setPrefHeight(25);
+        normalButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; " +
+                             "-fx-font-size: 11px; -fx-background-radius: 5;");
+        
+        normalButton.setOnAction(e -> {
+            createManualVehicle(entrySelector.getValue(), directionSelector.getValue(), VehicleTypeEnum.NORMAL);
+        });
+        this.getChildren().add(normalButton);
+        
+        javafx.scene.control.Button emergencyButton = new javafx.scene.control.Button("Ambulancia");
+        emergencyButton.setLayoutX(panelX + 120);
+        emergencyButton.setLayoutY(panelY + 145);
+        emergencyButton.setPrefWidth(100);
+        emergencyButton.setPrefHeight(25);
+        emergencyButton.setStyle("-fx-background-color: #F44336; -fx-text-fill: white; " +
+                                "-fx-font-size: 11px; -fx-background-radius: 5;");
+        
+        emergencyButton.setOnAction(e -> {
+            createManualVehicle(entrySelector.getValue(), directionSelector.getValue(), VehicleTypeEnum.EMERGENCY);
+        });
+        this.getChildren().add(emergencyButton);
+        
+        // Control de velocidad de ticks con slider mejorado
+        Text speedTitle = new Text(panelX + 10, panelY + 190, "Velocidad: 50 ticks/seg");
+        speedTitle.setFill(Color.WHITE);
+        speedTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        this.getChildren().add(speedTitle);
+        
+        javafx.scene.control.Slider speedSlider = new javafx.scene.control.Slider();
+        speedSlider.setMin(5);    // Mínimo: 5 ticks/seg
+        speedSlider.setMax(100);  // Máximo: 100 ticks/seg
+        speedSlider.setValue(50); // Valor por defecto: mitad del rango
+        speedSlider.setMajorTickUnit(25);
+        speedSlider.setMinorTickCount(4);
+        speedSlider.setSnapToTicks(false);
+        speedSlider.setShowTickLabels(true);
+        speedSlider.setShowTickMarks(true);
+        speedSlider.setLayoutX(panelX + 10);
+        speedSlider.setLayoutY(panelY + 205);
+        speedSlider.setPrefWidth(220);
+        speedSlider.setPrefHeight(40);
+        
+        speedSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (tickController != null) {
+                int ticksPerSecond = newVal.intValue();
+                // Convertir ticks por segundo a intervalo en milisegundos
+                int intervalMs = Math.max(1, 1000 / ticksPerSecond);
+                tickController.setTickInterval(intervalMs);
+                speedTitle.setText("Velocidad: " + ticksPerSecond + " ticks/seg");
+            }
+        });
+        this.getChildren().add(speedSlider);
+        
+        // Información de estado (más espaciada)
+        Text statusInfo = new Text(panelX + 10, panelY + 260, "Vehiculos: 0 | Tick: 0");
+        statusInfo.setFill(Color.LIGHTGRAY);
+        statusInfo.setFont(Font.font("Arial", FontWeight.NORMAL, 12));
+        this.getChildren().add(statusInfo);
+        
+        // Actualizar información cada segundo
+        javafx.animation.Timeline statusUpdater = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1), e -> {
+                if (vehicleController != null && tickController != null) {
+                    String status = String.format("Vehiculos: %d | Tick: %d", 
+                        vehicleController.getActiveVehicleCount(), 
+                        tickController.getTickCount());
+                    statusInfo.setText(status);
+                }
+            })
+        );
+        statusUpdater.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+        statusUpdater.play();
+    }
+    
+    /**
+     * Crea un vehículo manual según los parámetros seleccionados
+     */
+    private void createManualVehicle(String entry, String direction, VehicleTypeEnum type) {
+        // Convertir entrada a ID de calle
+        String streetId = switch (entry) {
+            case "Norte" -> "calle_north_entrada";
+            case "Sur" -> "calle_south_entrada";
+            case "Este" -> "calle_east_entrada";
+            case "Oeste" -> "calle_west_entrada";
+            default -> "calle_north_entrada";
+        };
+        
+        // Convertir dirección
+        DirectionEnum dir = switch (direction) {
+            case "Recto" -> DirectionEnum.STRAIGHT;
+            case "Izquierda" -> DirectionEnum.LEFT;
+            case "Derecha" -> DirectionEnum.RIGHT;
+            case "U-Turn" -> DirectionEnum.U_TURN;
+            default -> DirectionEnum.STRAIGHT;
+        };
+        
+        // Buscar la calle
+        Street entryStreet = scenarioController.getAllStreets().stream()
+            .filter(street -> street.getId().equals(streetId))
+            .findFirst()
+            .orElse(null);
+        
+        if (entryStreet != null && vehicleController != null) {
+            vehicleController.spawnVehicle(entryStreet, type, dir);
+        }
+    }
+    
+    /**
+     * Calcula el destino basado en el origen y la dirección
+     */
+    private String calculateDestination(String from, String direction) {
+        return switch (from) {
+            case "Norte" -> switch (direction) {
+                case "Recto" -> "Sur";
+                case "Izquierda" -> "Oeste";
+                case "Derecha" -> "Este";
+                case "U-Turn" -> "Norte";
+                default -> "?";
+            };
+            case "Sur" -> switch (direction) {
+                case "Recto" -> "Norte";
+                case "Izquierda" -> "Este";
+                case "Derecha" -> "Oeste";
+                case "U-Turn" -> "Sur";
+                default -> "?";
+            };
+            case "Este" -> switch (direction) {
+                case "Recto" -> "Oeste";
+                case "Izquierda" -> "Norte";
+                case "Derecha" -> "Sur";
+                case "U-Turn" -> "Este";
+                default -> "?";
+            };
+            case "Oeste" -> switch (direction) {
+                case "Recto" -> "Este";
+                case "Izquierda" -> "Sur";
+                case "Derecha" -> "Norte";
+                case "U-Turn" -> "Oeste";
+                default -> "?";
+            };
+            default -> "?";
+        };
+    }
+
     private void addTitleScenario1() {
         Text title = new Text(50, 50, "Escenario 1: Intersección de 4 Vías - 8 Carriles");
         title.setFill(Color.WHITE);
@@ -322,7 +676,7 @@ public class IntersectionView extends Pane {
         entryRect.setFill(Color.LIGHTBLUE);
         this.getChildren().add(entryRect);
 
-        Text entryText = new Text(75, startY + 12, "Carriles de Entrada");
+        Text entryText = new Text(75, startY + 12, "Carriles de Entrada (Spawn)");
         entryText.setFill(Color.WHITE);
         entryText.setFont(Font.font("Arial", FontWeight.NORMAL, 12));
         this.getChildren().add(entryText);
@@ -352,16 +706,22 @@ public class IntersectionView extends Pane {
      * Agrega un botón para regresar al menú principal
      */
     private void addBackButton() {
-        javafx.scene.control.Button backButton = new javafx.scene.control.Button("← Volver al Menú");
+        javafx.scene.control.Button backButton = new javafx.scene.control.Button("<- Volver al Menu");
         backButton.setLayoutX(50);
         backButton.setLayoutY(LaunchView.HEIGHT - 80);
         backButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; " +
                            "-fx-font-size: 16px; -fx-padding: 10 20 10 20; -fx-background-radius: 5;");
 
         backButton.setOnAction(e -> {
-            // Clean up traffic controller before switching scenes
+            // Clean up controllers before switching scenes
             if (trafficController != null) {
                 trafficController.stopControl();
+            }
+            if (vehicleController != null) {
+                vehicleController.cleanup();
+            }
+            if (tickController != null) {
+                tickController.stop();
             }
             // Obtener el Stage actual desde la escena
             javafx.stage.Stage stage = (javafx.stage.Stage) this.getScene().getWindow();

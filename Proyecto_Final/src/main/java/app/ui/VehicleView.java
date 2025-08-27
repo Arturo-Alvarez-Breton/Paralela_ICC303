@@ -54,10 +54,10 @@ public class VehicleView extends Group {
 
     private String getDirectionSymbol(DirectionEnum direction, String entryPoint) {
         String[][] symbols = {
-            {"↓", "→", "←", "↑"}, // Norte
-            {"←", "↓", "↑", "→"}, // Este
-            {"↑", "←", "→", "↓"}, // Sur
-            {"→", "↑", "↓", "←"}  // Oeste
+            {"v", ">", "<", "^"}, // Norte
+            {"<", "v", "^", ">"}, // Este
+            {"^", "<", ">", "v"}, // Sur
+            {">", "^", "v", "<"}  // Oeste
         };
 
         int entryIndex = switch (entryPoint) {
