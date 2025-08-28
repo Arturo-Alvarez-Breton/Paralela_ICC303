@@ -56,6 +56,8 @@ public class CollisionManager {
     private final Map<String, List<String>> vehiclesAheadOfAmbulance = new ConcurrentHashMap<>();
     // Orden de ambulancias para procesar una a la vez
     private final Queue<String> ambulanceProcessingQueue = new LinkedBlockingQueue<>();
+    // NUEVO: Vehículos que han salido de la intersección y son completamente libres
+    private final Set<String> vehiclesPostIntersection = new HashSet<>();
     
     /**
      * Registra un vehículo para tracking de colisiones con entrada de spawn segura
@@ -157,6 +159,7 @@ public class CollisionManager {
         
         // NUEVO: Limpiar estructuras de ambulancias
         vehiclesAlreadyCrossing.remove(vehicleId);
+        vehiclesPostIntersection.remove(vehicleId); // NUEVO: Limpiar vehículos post-intersección
         vehiclesAheadOfAmbulance.remove(vehicleId); // Si era ambulancia
         ambulanceProcessingQueue.remove(vehicleId);
         
@@ -195,6 +198,20 @@ public class CollisionManager {
      * Verifica si un vehículo puede moverse a una nueva posición con sistema FIFO
      */
     public boolean canMove(String vehicleId, double newX, double newY, double speed) {
+        // NUEVO: Si el vehículo ya salió de la intersección, es completamente libre
+        if (vehiclesPostIntersection.contains(vehicleId)) {
+            return true; // Movimiento completamente libre después de cruzar
+        }
+        
+        // NUEVO: Si el vehículo ya está en la intersección, puede moverse libremente
+        // para evitar que se detenga en medio del cruce
+        VehiclePosition currentPos = vehiclePositions.get(vehicleId);
+        if (currentPos != null && isInIntersectionZone(currentPos.x, currentPos.y)) {
+            // Vehículo ya está en la intersección - permitir movimiento sin verificar colisiones
+            System.out.println("Vehículo " + vehicleId + " ya en intersección - movimiento libre");
+            return true;
+        }
+        
         // 1. Verificar colisiones con otros vehículos, respetando prioridades FIFO
         if (hasCollisionWithOtherVehicles(vehicleId, newX, newY)) {
             return false;
@@ -223,7 +240,17 @@ public class CollisionManager {
             
             VehiclePosition otherPos = entry.getValue();
             if (isColliding(x, y, otherPos.x, otherPos.y)) {
-                // Si hay colisión, verificar quién llegó primero
+                // NUEVO: Si ambos vehículos están en la intersección, permitir movimiento 
+                // (cada uno sigue su ruta sin detenerse)
+                boolean meInIntersection = isInIntersectionZone(x, y);
+                boolean otherInIntersection = isInIntersectionZone(otherPos.x, otherPos.y);
+                
+                if (meInIntersection && otherInIntersection) {
+                    System.out.println("Ambos vehículos en intersección: " + vehicleId + " y " + otherId + " - permitir movimiento");
+                    return false; // No hay colisión, permitir movimiento
+                }
+                
+                // Si hay colisión fuera de la intersección, verificar quién llegó primero
                 Long myArrival = vehicleArrivalTime.get(vehicleId);
                 Long otherArrival = vehicleArrivalTime.get(otherId);
                 
@@ -439,6 +466,10 @@ public class CollisionManager {
                 // NUEVO: El vehículo terminó de cruzar, ya no está en la ecuación
                 vehiclesAlreadyCrossing.remove(vehicleId);
                 
+                // NUEVO: Marcar como vehículo post-intersección (completamente libre)
+                vehiclesPostIntersection.add(vehicleId);
+                System.out.println("Vehículo " + vehicleId + " ahora es libre post-intersección");
+                
                 // Si no hay ambulancias activas, aplicar espera normal
                 if (ambulanceProcessingQueue.isEmpty()) {
                     postExitWaitTicks = POST_EXIT_WAIT_DURATION;
@@ -501,6 +532,7 @@ public class CollisionManager {
         
         // NUEVO: Limpiar estructuras de ambulancias
         vehiclesAlreadyCrossing.clear();
+        vehiclesPostIntersection.clear(); // NUEVO: Limpiar vehículos post-intersección
         vehiclesAheadOfAmbulance.clear();
         ambulanceProcessingQueue.clear();
         
@@ -564,6 +596,10 @@ public class CollisionManager {
             System.out.println("Vehículos ya cruzando (no se pueden interrumpir): " + vehiclesAlreadyCrossing);
         }
         
+        if (!vehiclesPostIntersection.isEmpty()) {
+            System.out.println("Vehículos post-intersección (completamente libres): " + vehiclesPostIntersection);
+        }
+        
         if (!emergencyLaneQueue.isEmpty()) {
             System.out.print("Lanes emergencia prioridad: [");
             emergencyLaneQueue.forEach(el -> System.out.print(el.lane + "(first=" + el.firstEmergencyArrivalOrder + ") "));
@@ -577,13 +613,15 @@ public class CollisionManager {
             Long arrival = vehicleArrivalTime.get(entry.getKey());
             boolean isEmergency = emergencyFlag.getOrDefault(entry.getKey(), false);
             boolean alreadyCrossing = vehiclesAlreadyCrossing.contains(entry.getKey());
+            boolean postIntersection = vehiclesPostIntersection.contains(entry.getKey());
             
             System.out.println("  " + entry.getKey() + ": " + pos + 
                              " [Llegada: " + arrival + "]" +
                              (inIntersection ? " [INTERSECCIÓN]" : "") +
                              (inWaiting ? " [ESPERA]" : "") +
                              (isEmergency ? " [AMBULANCIA]" : "") +
-                             (alreadyCrossing ? " [CRUZANDO]" : ""));
+                             (alreadyCrossing ? " [CRUZANDO]" : "") +
+                             (postIntersection ? " [LIBRE]" : ""));
         }
         
         // Mostrar colas por spawn
