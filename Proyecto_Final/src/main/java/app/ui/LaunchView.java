@@ -10,8 +10,8 @@ import javafx.stage.Stage;
 
 public class LaunchView {
 
-    public static final int WIDTH = 1280;
-    public static final int HEIGHT = 720;
+    public static final int WIDTH = 1600;  // Aumentado de 1280 a 1600 (320 píxeles más)
+    public static final int HEIGHT = 900;  // Aumentado de 720 a 900 (180 píxeles más)
 
     public Scene createLaunchScene(Stage primaryStage) {
         // Título

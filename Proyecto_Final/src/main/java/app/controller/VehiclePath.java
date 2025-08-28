@@ -660,7 +660,7 @@ public class VehiclePath {
      * Verifica si el vehículo está fuera de los límites de la pantalla
      */
     public boolean isOutOfBounds() {
-        return currentX < -100 || currentX > 1380 || currentY < -100 || currentY > 820;
+        return currentX < -100 || currentX > 1700 || currentY < -100 || currentY > 1000; // Actualizado para 1600x900 con margen
     }
     
     // Getters

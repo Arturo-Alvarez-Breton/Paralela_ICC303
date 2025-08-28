@@ -77,9 +77,9 @@ public class ScenarioController {
     public void initializeScenario2() {
         clearScenario();
 
-        // Layout constants - centered and matching Scenario 1 dimensions
-        final int sceneWidth = 1280;
-        final int sceneHeight = 720;
+        // Layout constants - centered and adjusted for new larger screen
+        final int sceneWidth = 1600;  // Actualizado de 1280 a 1600
+        final int sceneHeight = 900;  // Actualizado de 720 a 900
         final int centerX = sceneWidth / 2;
         final int centerY = sceneHeight / 2;
 
@@ -104,8 +104,8 @@ public class ScenarioController {
         int weCenterY = weLeftY + laneHeight + laneGap;
         int weRightY = weCenterY + laneHeight + laneGap;
 
-        // Center intersections horizontally with proper spacing - making highway longer
-        int totalRoadLength = 1000; // Increased from 800 to make streets longer
+        // Center intersections horizontally with proper spacing - making highway longer for wider screen
+        int totalRoadLength = 1200; // Aumentado de 1000 a 1200 para aprovechar la pantalla más ancha
         int leftMargin = centerX - (totalRoadLength / 2);
         int intersectionSpacing = totalRoadLength / 3; // Divide into 3 equal segments for 4 intersections
 

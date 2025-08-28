@@ -17,9 +17,9 @@ public class StreetService {
     public static final int STANDARD_STREET_HEIGHT = 200;
     public static final int STANDARD_THRESHOLD = 10; // Max vehicles per street
 
-    // Reference point - center of intersection
-    public static final int INTERSECTION_CENTER_X = 640; // Half of LaunchView.WIDTH
-    public static final int INTERSECTION_CENTER_Y = 360; // Half of LaunchView.HEIGHT
+    // Reference point - center of intersection - UPDATED for new screen dimensions
+    public static final int INTERSECTION_CENTER_X = 800; // Half of LaunchView.WIDTH (1600/2)
+    public static final int INTERSECTION_CENTER_Y = 450; // Half of LaunchView.HEIGHT (900/2)
 
     /**
      * Creates a street with standard configuration
