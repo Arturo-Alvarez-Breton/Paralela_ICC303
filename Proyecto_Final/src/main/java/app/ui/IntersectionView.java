@@ -1,26 +1,25 @@
 package app.ui;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import app.controller.ScenarioController;
+import app.controller.TickController;
 import app.controller.TrafficController;
 import app.controller.VehicleController;
-import app.controller.TickController;
-import app.model.Street;
 import app.model.Intersection;
+import app.model.Street;
 import app.model.TrafficLight;
 import app.model.enums.DirectionEnum;
 import app.model.enums.VehicleTypeEnum;
-import javafx.application.Platform;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Circle;
-import javafx.scene.text.Text;
+import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-
-import java.util.List;
-import java.util.ArrayList;
+import javafx.scene.text.Text;
 
 /**
  * Vista visual para mostrar el Escenario 1 con 8 calles (carriles de entrada y salida)

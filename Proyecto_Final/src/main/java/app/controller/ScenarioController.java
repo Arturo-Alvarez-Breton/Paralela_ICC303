@@ -1,17 +1,17 @@
 package app.controller;
 
-import app.model.Intersection;
-import app.model.Street;
-import app.model.TrafficLight;
-import app.service.IntersectionService;
-import app.service.StreetService;
-import app.service.TrafficLightService;
-import app.model.enums.DirectionEnum;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import app.model.Intersection;
+import app.model.Street;
+import app.model.TrafficLight;
+import app.model.enums.DirectionEnum;
+import app.service.IntersectionService;
+import app.service.StreetService;
+import app.service.TrafficLightService;
 
 /**
  * Controller for managing different traffic simulation scenarios.
