@@ -51,32 +51,45 @@ public class VehiclePath {
      * Calcula todos los puntos de la ruta usando las calles reales del escenario
      * CORREGIDO: Implementa tabla de verdad correcta y apex apropiados para cada giro
      * SOLUCIONADO: Elimina el comportamiento "va-viene-sigue" usando rutas optimizadas
+     * ACTUALIZADO: Soporte para Escenario 2 (autopista)
      */
     private void calculatePath(double startX, double startY, String entryDirection, DirectionEnum turnDirection, ScenarioController scenarioController) {
         // Punto inicial (spawn del vehículo)
         waypoints.add(new PathPoint(startX, startY));
         
-        // Calcular dirección de salida usando tabla de verdad corregida
-        String exitDirection = calculateExitDirection(entryDirection, turnDirection);
+        // Detectar si es Escenario 2 por la presencia de calles con "_lane_segment"
+        boolean isScenario2 = scenarioController.getAllStreets().stream()
+            .anyMatch(street -> street.getId().contains("_lane_segment"));
         
-        // Imprimir debug para validar tabla de verdad
-        System.out.println("=== RUTA CALCULADA ===");
-        System.out.println("Entrada: " + entryDirection + " -> Giro: " + turnDirection + " -> Salida: " + exitDirection);
-        
-        // Generar waypoints según tipo de movimiento
-        switch (turnDirection) {
-            case STRAIGHT:
-                calculateStraightPath(startX, startY, entryDirection, exitDirection);
-                break;
-            case RIGHT:
-                calculateRightTurnPath(startX, startY, entryDirection, exitDirection);
-                break;
-            case LEFT:
-                calculateLeftTurnPath(startX, startY, entryDirection, exitDirection);
-                break;
-            case U_TURN:
-                calculateUTurnPath(startX, startY, entryDirection, exitDirection);
-                break;
+        if (isScenario2) {
+            // ESCENARIO 2: Autopista
+            System.out.println("=== RUTA ESCENARIO 2 (AUTOPISTA) ===");
+            System.out.println("Entrada: " + entryDirection + " -> Giro: " + turnDirection);
+            calculateScenario2Path(startX, startY, entryDirection, turnDirection);
+        } else {
+            // ESCENARIO 1: Intersección tradicional (código original)
+            // Calcular dirección de salida usando tabla de verdad corregida
+            String exitDirection = calculateExitDirection(entryDirection, turnDirection);
+            
+            // Imprimir debug para validar tabla de verdad
+            System.out.println("=== RUTA CALCULADA ===");
+            System.out.println("Entrada: " + entryDirection + " -> Giro: " + turnDirection + " -> Salida: " + exitDirection);
+            
+            // Generar waypoints según tipo de movimiento
+            switch (turnDirection) {
+                case STRAIGHT:
+                    calculateStraightPath(startX, startY, entryDirection, exitDirection);
+                    break;
+                case RIGHT:
+                    calculateRightTurnPath(startX, startY, entryDirection, exitDirection);
+                    break;
+                case LEFT:
+                    calculateLeftTurnPath(startX, startY, entryDirection, exitDirection);
+                    break;
+                case U_TURN:
+                    calculateUTurnPath(startX, startY, entryDirection, exitDirection);
+                    break;
+            }
         }
         
         // Debug: Imprimir todos los waypoints calculados
@@ -856,4 +869,105 @@ public class VehiclePath {
      * SOLUCIÓN: PARE más cerca del destino para trayectoria directa
      */
     // Eliminadas implementaciones especiales East/West. Ahora toda la lógica comparte el mismo patrón.
+    
+    /**
+     * Calcula la ruta para el Escenario 2 (Autopista)
+     * Maneja los segmentos de carriles y las intersecciones
+     */
+    private void calculateScenario2Path(double startX, double startY, String entryDirection, DirectionEnum turnDirection) {
+        System.out.println("Calculando ruta Escenario 2 desde: (" + startX + ", " + startY + ")");
+        
+        if (turnDirection == DirectionEnum.STRAIGHT) {
+            // Para movimientos rectos, crear waypoints hasta el final del carril
+            calculateScenario2StraightPath(startX, startY, entryDirection);
+        } else {
+            // Para giros, encontrar la calle de salida correspondiente
+            calculateScenario2TurnPath(startX, startY, entryDirection, turnDirection);
+        }
+        
+        // Debug: Imprimir waypoints para Escenario 2
+        System.out.println("Waypoints Escenario 2:");
+        for (int i = 0; i < waypoints.size(); i++) {
+            PathPoint point = waypoints.get(i);
+            System.out.println("  Waypoint " + i + ": " + point);
+        }
+        System.out.println("===========================");
+    }
+    
+    /**
+     * Calcula ruta recta para el Escenario 2 (a lo largo de los segmentos)
+     */
+    private void calculateScenario2StraightPath(double startX, double startY, String entryDirection) {
+        // Determinar el tipo de carril y dirección
+        if (entryDirection.equals("west")) {
+            // Carril que va West→East (de izquierda a derecha)
+            // Buscar los segmentos siguientes del mismo carril
+            List<Street> segments = findScenario2Lane(startX, startY, "east");
+            
+            for (Street segment : segments) {
+                // Agregar waypoint al final de cada segmento
+                double segmentEndX = segment.getPosX() + segment.getWidth();
+                double segmentCenterY = segment.getPosY() + segment.getHeight() / 2.0;
+                waypoints.add(new PathPoint(segmentEndX, segmentCenterY));
+            }
+        } else if (entryDirection.equals("east")) {
+            // Carril que va East→West (de derecha a izquierda)
+            List<Street> segments = findScenario2Lane(startX, startY, "west");
+            
+            for (Street segment : segments) {
+                // Agregar waypoint al inicio de cada segmento
+                double segmentStartX = segment.getPosX();
+                double segmentCenterY = segment.getPosY() + segment.getHeight() / 2.0;
+                waypoints.add(new PathPoint(segmentStartX, segmentCenterY));
+            }
+        }
+    }
+    
+    /**
+     * Encuentra los segmentos de carril para movimiento recto en Escenario 2
+     */
+    private List<Street> findScenario2Lane(double currentX, double currentY, String direction) {
+        List<Street> segments = new ArrayList<>();
+        
+        // Buscar carriles que coincidan con la dirección y estén alineados verticalmente
+        List<Street> allStreets = scenarioController.getAllStreets();
+        
+        for (Street street : allStreets) {
+            String streetId = street.getId().toLowerCase();
+            
+            // Solo considerar carriles principales (no de salida)
+            if (streetId.contains("_lane_segment") && !streetId.contains("salida")) {
+                // Verificar si está en la misma dirección y alineación vertical
+                if ((direction.equals("east") && streetId.startsWith("east_")) ||
+                    (direction.equals("west") && streetId.startsWith("west_"))) {
+                    
+                    // Verificar alineación vertical (mismo Y aproximadamente)
+                    double streetCenterY = street.getPosY() + street.getHeight() / 2.0;
+                    if (Math.abs(streetCenterY - currentY) < 25) { // Tolerancia de 25 píxeles
+                        segments.add(street);
+                    }
+                }
+            }
+        }
+        
+        // Ordenar segmentos por posición X
+        segments.sort((s1, s2) -> {
+            if (direction.equals("east")) {
+                return Integer.compare(s1.getPosX(), s2.getPosX()); // Izquierda a derecha
+            } else {
+                return Integer.compare(s2.getPosX(), s1.getPosX()); // Derecha a izquierda
+            }
+        });
+        
+        return segments;
+    }
+    
+    /**
+     * Calcula ruta con giros para el Escenario 2
+     */
+    private void calculateScenario2TurnPath(double startX, double startY, String entryDirection, DirectionEnum turnDirection) {
+        // Por ahora, implementar como movimiento recto
+        // TODO: Implementar giros hacia calles norte-sur
+        calculateScenario2StraightPath(startX, startY, entryDirection);
+    }
 }

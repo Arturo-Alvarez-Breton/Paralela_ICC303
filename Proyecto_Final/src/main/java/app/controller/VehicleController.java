@@ -184,43 +184,63 @@ public class VehicleController implements TickController.TickListener {
      * Calcula la ruta completa que debe seguir un vehículo
      */
     private VehiclePath calculateVehiclePath(Street entryStreet, DirectionEnum direction) {
-        String entryDirection = parseDirectionFromStreetId(entryStreet.getId());
+        String streetId = entryStreet.getId();
+        String entryDirection = parseDirectionFromStreetId(streetId);
         
         // Posición inicial (extremo de la calle de entrada)
         double startX, startY;
         
-        // Calcular posición inicial en el EXTREMO CORRECTO de la calle de entrada
-        switch (entryDirection) {
-            case "north":
-                // Lado superior: carril azul va hacia el sur (↓)
-                // Vehículo aparece en el carril azul (entrada) del lado norte
-                startX = entryStreet.getPosX() + entryStreet.getWidth() / 2.0; // Centro del carril azul
-                startY = entryStreet.getPosY(); // Extremo superior (más alejado de la intersección)
-                System.out.println("Vehículo Norte creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
-                break;
-            case "south":
-                // Lado inferior: carril azul va hacia el norte (↑)
-                // Vehículo aparece en el carril azul (entrada) del lado sur
-                startX = entryStreet.getPosX() + entryStreet.getWidth() / 2.0; // Centro del carril azul
-                startY = entryStreet.getPosY() + entryStreet.getHeight(); // Extremo inferior (más alejado de la intersección)
-                System.out.println("Vehículo Sur creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
-                break;
-            case "east":
-                // Lado derecho: carril azul va hacia el oeste
-                // Vehículo aparece en el carril azul (entrada) del lado este
-                startX = entryStreet.getPosX() + entryStreet.getWidth(); // Extremo derecho (más alejado de la intersección)
-                startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0; // Centro del carril azul
-                System.out.println("Vehículo Este creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
-                break;
-            case "west":
-                // Lado izquierdo: carril azul va hacia el este (→)
-                // Vehículo aparece en el carril azul (entrada) del lado oeste
-                startX = entryStreet.getPosX(); // Extremo izquierdo (más alejado de la intersección)
-                startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0; // Centro del carril azul
-                System.out.println("Vehículo Oeste creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
-                break;
-            default:
-                return null;
+        // Detectar si es Escenario 2 (autopista) por el formato del ID
+        if (streetId.contains("_lane_segment")) {
+            // ESCENARIO 2: Autopista
+            System.out.println("Calculando spawn para Escenario 2 - Calle: " + streetId);
+            
+            if (streetId.startsWith("east_")) {
+                // Carril East: va de oeste hacia este (West→East) - banda inferior
+                // Vehículo aparece en el extremo IZQUIERDO del segmento
+                startX = entryStreet.getPosX(); // Extremo izquierdo
+                startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0; // Centro del carril
+                entryDirection = "west"; // Viene desde el oeste hacia el este
+                System.out.println("Vehículo East creado en: (" + startX + ", " + startY + ") - va hacia el este");
+            } else if (streetId.startsWith("west_")) {
+                // Carril West: va de este hacia oeste (East→West) - banda superior
+                // Vehículo aparece en el extremo DERECHO del segmento
+                startX = entryStreet.getPosX() + entryStreet.getWidth(); // Extremo derecho
+                startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0; // Centro del carril
+                entryDirection = "east"; // Viene desde el este hacia el oeste
+                System.out.println("Vehículo West creado en: (" + startX + ", " + startY + ") - va hacia el oeste");
+            } else {
+                // Fallback para otros casos
+                startX = entryStreet.getPosX() + entryStreet.getWidth() / 2.0;
+                startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0;
+                System.out.println("Vehículo spawn fallback en: (" + startX + ", " + startY + ")");
+            }
+        } else {
+            // ESCENARIO 1: Intersección tradicional (código original)
+            switch (entryDirection) {
+                case "north":
+                    startX = entryStreet.getPosX() + entryStreet.getWidth() / 2.0;
+                    startY = entryStreet.getPosY();
+                    System.out.println("Vehículo Norte creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
+                    break;
+                case "south":
+                    startX = entryStreet.getPosX() + entryStreet.getWidth() / 2.0;
+                    startY = entryStreet.getPosY() + entryStreet.getHeight();
+                    System.out.println("Vehículo Sur creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
+                    break;
+                case "east":
+                    startX = entryStreet.getPosX() + entryStreet.getWidth();
+                    startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0;
+                    System.out.println("Vehículo Este creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
+                    break;
+                case "west":
+                    startX = entryStreet.getPosX();
+                    startY = entryStreet.getPosY() + entryStreet.getHeight() / 2.0;
+                    System.out.println("Vehículo Oeste creado en: (" + startX + ", " + startY + ") - Calle: " + entryStreet.getId());
+                    break;
+                default:
+                    return null;
+            }
         }
         
         // Calcular ruta completa basada en la dirección elegida

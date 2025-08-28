@@ -53,6 +53,38 @@ public class VehicleView extends Group {
     }
 
     private String getDirectionSymbol(DirectionEnum direction, String entryPoint) {
+        // DETECCIÓN AUTOMÁTICA: Si entryPoint contiene información de escenario 2
+        // En VehicleController, parseEntryPoint devuelve "este" o "oeste" para autopista
+        if (entryPoint.equals("este") || entryPoint.equals("oeste")) {
+            // ESCENARIO 2: Autopista - lógica simplificada
+            if (entryPoint.equals("este")) {
+                // Carril East: va de West→East (hacia la derecha)
+                switch (direction) {
+                    case STRAIGHT:
+                        return ">"; // Hacia la derecha
+                    case LEFT:
+                        return "^"; // Giro izquierda hacia norte
+                    case RIGHT:
+                        return "v"; // Giro derecha hacia sur
+                    case U_TURN:
+                        return "<"; // U-turn hacia oeste
+                }
+            } else { // entryPoint.equals("oeste")
+                // Carril West: va de East→West (hacia la izquierda)
+                switch (direction) {
+                    case STRAIGHT:
+                        return "<"; // Hacia la izquierda
+                    case LEFT:
+                        return "v"; // Giro izquierda hacia sur
+                    case RIGHT:
+                        return "^"; // Giro derecha hacia norte
+                    case U_TURN:
+                        return ">"; // U-turn hacia este
+                }
+            }
+        }
+        
+        // ESCENARIO 1: Intersección tradicional (código original)
         String[][] symbols = {
             {"v", ">", "<", "^"}, // Norte
             {"<", "v", "^", ">"}, // Este
