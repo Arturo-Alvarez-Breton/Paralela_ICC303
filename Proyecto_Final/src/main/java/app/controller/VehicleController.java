@@ -99,7 +99,7 @@ public class VehicleController implements TickController.TickListener {
                 VehicleTypeEnum.EMERGENCY : VehicleTypeEnum.NORMAL;
             
             // Seleccionar dirección aleatoria de las permitidas en la calle
-            List<DirectionEnum> possibleDirections = entryStreet.getPossibleDirections();
+            List<DirectionEnum> possibleDirections = getAllDirections();
             DirectionEnum direction = possibleDirections.get(
                 ThreadLocalRandom.current().nextInt(possibleDirections.size()));
             
@@ -110,6 +110,12 @@ public class VehicleController implements TickController.TickListener {
         }
         
         System.out.println("No se pudo crear vehículo - todas las calles de entrada están bloqueadas");
+    }
+    
+    public List<DirectionEnum> getAllDirections(){
+        List<DirectionEnum> allDirections = new ArrayList<>();
+        Collections.addAll(allDirections, DirectionEnum.values());
+        return allDirections;
     }
     
     /**
