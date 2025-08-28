@@ -88,13 +88,13 @@ public class VehiclePath {
     }
     
     /**
-     * Calcula ruta recta optimizada - COMPLETAMENTE MONÓTONA
+     * Calcula ruta recta optimizada - COMPLETAMENTE MONOTONA
      * CORREGIDO: Elimina waypoints duplicados que causan rebote "va-viene-sigue"
-     * FIX CRÍTICO: Para movimientos rectos, solo usar STOP → DESTINO (sin waypoints intermedios)
+     * FIX CRITICO: Para movimientos rectos, solo usar STOP -> DESTINO (sin waypoints intermedios)
      */
     private void calculateStraightPath(double startX, double startY, String entryDirection, String exitDirection) {
         System.out.println("=== CALCULATE STRAIGHT PATH ===");
-        System.out.println("Start: (" + startX + ", " + startY + ") " + entryDirection + "→" + exitDirection);
+        System.out.println("Start: (" + startX + ", " + startY + ") " + entryDirection + " -> " + exitDirection);
         // Para North/South mantenemos la lógica existente (Stop -> Final) que ya funciona
         if (entryDirection.equals("north") || entryDirection.equals("south")) {
             addStopLinePoint(entryDirection, startX, startY);
@@ -167,12 +167,12 @@ public class VehiclePath {
         double apexX, apexY;
         int apexRadius = 25; // Radio desde la esquina hacia el centro
         
-        // Calcular apex basado en la combinación entrada→salida
-        String combination = entryDirection + "→" + exitDirection;
+        // Calcular apex basado en la combinacion entrada -> salida
+        String combination = entryDirection + " -> " + exitDirection;
         
         switch (combination) {
             // Giros desde Sur
-            case "south→east":  // S→Der→E: apex SE
+            case "south -> east":  // S->Der->E: apex SE
                 apexX = CENTER_X + INTERSECTION_SIZE/2.0 - apexRadius;
                 apexY = CENTER_Y + INTERSECTION_SIZE/2.0 - apexRadius;
                 break;

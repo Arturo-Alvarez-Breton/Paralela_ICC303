@@ -321,12 +321,32 @@ public class VehicleController implements TickController.TickListener {
     }
     
     /**
-     * Obtiene las calles de entrada (azules)
+     * Obtiene las calles de entrada (para spawn de vehículos)
+     * Escenario 1: calles con "entrada"
+     * Escenario 2: carriles que permiten spawn (segmentos iniciales)
      */
     private List<Street> getEntryStreets() {
-        return scenarioController.getAllStreets().stream()
-            .filter(street -> street.getId().contains("entrada"))
-            .toList();
+        List<Street> allStreets = scenarioController.getAllStreets();
+        
+        // Detectar si es Escenario 1 o 2
+        boolean hasEntradaSalida = allStreets.stream()
+            .anyMatch(street -> street.getId().contains("entrada"));
+        
+        if (hasEntradaSalida) {
+            // Escenario 1: usar calles con "entrada"
+            return allStreets.stream()
+                .filter(street -> street.getId().contains("entrada"))
+                .toList();
+        } else {
+            // Escenario 2: usar carriles principales (no de salida norte-sur)
+            return allStreets.stream()
+                .filter(street -> !street.getId().contains("salida") && 
+                                (street.getId().contains("east_") || 
+                                 street.getId().contains("west_") ||
+                                 street.getId().contains("_lane")))
+                .limit(6) // Limitar a los 6 carriles principales
+                .toList();
+        }
     }
     
     /**

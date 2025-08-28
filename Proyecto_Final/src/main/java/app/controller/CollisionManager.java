@@ -49,6 +49,14 @@ public class CollisionManager {
     private final PriorityQueue<EmergencyLane> emergencyLaneQueue = new PriorityQueue<>(Comparator.comparingLong(e -> e.firstEmergencyArrivalOrder));
     private final Map<String, EmergencyLane> emergencyLaneIndex = new HashMap<>(); // lane -> EmergencyLane existente
     
+    // === NUEVO: CONTROL AVANZADO DE AMBULANCIAS ===
+    // Lista de vehículos que YA INICIARON el cruce (deben completarlo sin importar ambulancias)
+    private final Set<String> vehiclesAlreadyCrossing = new HashSet<>();
+    // Por cada ambulancia, lista de vehículos que estaban delante y deben cruzar primero
+    private final Map<String, List<String>> vehiclesAheadOfAmbulance = new ConcurrentHashMap<>();
+    // Orden de ambulancias para procesar una a la vez
+    private final Queue<String> ambulanceProcessingQueue = new LinkedBlockingQueue<>();
+    
     /**
      * Registra un vehículo para tracking de colisiones con entrada de spawn segura
      */
@@ -84,6 +92,29 @@ public class CollisionManager {
 
         if (isEmergency) {
             emergencyCountPerLane.merge(spawnDirection, 1, Integer::sum);
+            
+            // NUEVO: Capturar vehículos que estaban delante de esta ambulancia en su carril
+            List<String> vehiclesAhead = new ArrayList<>();
+            for (Map.Entry<String, String> entry : vehicleLane.entrySet()) {
+                String otherVehicleId = entry.getKey();
+                String otherLane = entry.getValue();
+                
+                // Si está en el mismo carril y llegó antes que la ambulancia
+                if (spawnDirection.equals(otherLane)) {
+                    Long otherArrival = vehicleArrivalTime.get(otherVehicleId);
+                    if (otherArrival != null && otherArrival < order && 
+                        !emergencyFlag.getOrDefault(otherVehicleId, false)) {
+                        vehiclesAhead.add(otherVehicleId);
+                    }
+                }
+            }
+            
+            vehiclesAheadOfAmbulance.put(vehicleId, vehiclesAhead);
+            ambulanceProcessingQueue.offer(vehicleId);
+            
+            System.out.println("[EMERGENCIA] Ambulancia " + vehicleId + " registrada en " + spawnDirection + 
+                             " (orden " + order + ") - Vehículos delante: " + vehiclesAhead);
+            
             // Si es la primera emergencia de ese carril, agregar a cola prioritaria
             if (!emergencyLaneIndex.containsKey(spawnDirection)) {
                 EmergencyLane el = new EmergencyLane(spawnDirection, order);
@@ -92,6 +123,7 @@ public class CollisionManager {
                 System.out.println("[EMERGENCIA] Nuevo carril prioritario: " + spawnDirection + " (orden " + order + ")");
             }
         }
+        
         System.out.println("Vehículo registrado en CollisionManager: " + vehicleId +
                 " en (" + x + ", " + y + ") dirección: " + spawnDirection + (isEmergency ? " [EMERGENCY]" : ""));
     }
@@ -122,6 +154,17 @@ public class CollisionManager {
         vehicleArrivalTime.remove(vehicleId);
         Boolean wasEmergency = emergencyFlag.remove(vehicleId);
         String lane = vehicleLane.remove(vehicleId);
+        
+        // NUEVO: Limpiar estructuras de ambulancias
+        vehiclesAlreadyCrossing.remove(vehicleId);
+        vehiclesAheadOfAmbulance.remove(vehicleId); // Si era ambulancia
+        ambulanceProcessingQueue.remove(vehicleId);
+        
+        // Remover de las listas de vehículos delante de ambulancias
+        for (List<String> vehiclesAhead : vehiclesAheadOfAmbulance.values()) {
+            vehiclesAhead.remove(vehicleId);
+        }
+        
         if (wasEmergency != null && wasEmergency && lane != null) {
             emergencyCountPerLane.merge(lane, -1, Integer::sum);
             if (emergencyCountPerLane.getOrDefault(lane, 0) <= 0) {
@@ -233,16 +276,18 @@ public class CollisionManager {
     }
     
     /**
-     * Verifica si puede entrar a la intersección usando cola FIFO
-     * NUEVO: Implementa espera de 10 ticks después de que un vehículo salga
+     * Verifica si puede entrar a la intersección con la nueva lógica de ambulancias
+     * REGLAS:
+     * 1. Vehículos que ya están cruzando terminan sin interrupciones
+     * 2. Cuando llega ambulancia: los que no han entrado al cruce esperan
+     * 3. Los vehículos delante de ambulancia tienen prioridad sobre ella
+     * 4. Ambulancias se procesan una a la vez por orden de llegada
      */
     private boolean canEnterIntersectionFIFO(String vehicleId) {
-        String lane = vehicleLane.get(vehicleId);
-        boolean emergencyActive = !emergencyLaneQueue.isEmpty();
-        String topEmergencyLane = emergencyActive ? emergencyLaneQueue.peek().lane : null;
-
-        // Si hay emergencia activa, ignorar periodo post-salida para prioridad
-        if (!emergencyActive && postExitWaitTicks > 0) {
+        boolean isEmergency = emergencyFlag.getOrDefault(vehicleId, false);
+        
+        // Si no hay emergencias activas, aplicar espera post-salida normal
+        if (ambulanceProcessingQueue.isEmpty() && postExitWaitTicks > 0) {
             if (!intersectionQueue.contains(vehicleId)) {
                 intersectionQueue.add(vehicleId);
                 System.out.println("Vehículo " + vehicleId + " agregado a cola - esperando " + postExitWaitTicks + " ticks post-salida");
@@ -250,39 +295,75 @@ public class CollisionManager {
             return false;
         }
 
-        // Intersección libre
-        if (vehicleInIntersection == null) {
-            if (emergencyActive) {
-                if (lane != null && lane.equals(topEmergencyLane)) {
-                    int remainingEmergencies = emergencyCountPerLane.getOrDefault(lane, 0);
-                    boolean isEmergency = emergencyFlag.getOrDefault(vehicleId, false);
-                    // Mientras queden ambulancias en ese carril, solo ellas pueden entrar
-                    if (remainingEmergencies > 0 && !isEmergency) {
-                        // No permitir todavía a vehículo normal del carril prioritario
-                    } else {
-                        vehicleInIntersection = vehicleId;
-                        intersectionQueue.remove(vehicleId);
-                        System.out.println("[EMERGENCIA] Vehículo " + vehicleId + " entra (carril " + lane + ")" + (isEmergency?" [EMERGENCY]":""));
-                        return true;
-                    }
-                }
-            } else {
+        // === LÓGICA SIN AMBULANCIAS (normal FIFO) ===
+        if (ambulanceProcessingQueue.isEmpty()) {
+            if (vehicleInIntersection == null) {
                 if (intersectionQueue.isEmpty() || vehicleId.equals(intersectionQueue.peek())) {
                     vehicleInIntersection = vehicleId;
                     intersectionQueue.remove(vehicleId);
-                    System.out.println("Vehículo " + vehicleId + " entra a la intersección (FIFO)");
+                    vehiclesAlreadyCrossing.add(vehicleId); // Marcar como "ya cruzando"
+                    System.out.println("Vehículo " + vehicleId + " entra a la intersección (FIFO normal)");
                     return true;
                 }
+            } else if (vehicleId.equals(vehicleInIntersection)) {
+                return true; // Ya está dentro
             }
-        } else if (vehicleId.equals(vehicleInIntersection)) {
-            return true; // ya dentro
+
+            // Agregar a cola si no está
+            if (!intersectionQueue.contains(vehicleId)) {
+                intersectionQueue.add(vehicleId);
+                System.out.println("Vehículo " + vehicleId + " agregado a cola intersección pos " + getQueuePosition(intersectionQueue, vehicleId));
+            }
+            return false;
         }
 
-        // Añadir a cola si no está
+        // === LÓGICA CON AMBULANCIAS ACTIVAS ===
+        String currentAmbulance = ambulanceProcessingQueue.peek();
+        if (currentAmbulance == null) return false;
+        
+        List<String> vehiclesAheadOfCurrentAmbulance = vehiclesAheadOfAmbulance.get(currentAmbulance);
+        if (vehiclesAheadOfCurrentAmbulance == null) vehiclesAheadOfCurrentAmbulance = new ArrayList<>();
+        
+        // 1. Si el vehículo ya está cruzando, puede continuar sin restricciones
+        if (vehiclesAlreadyCrossing.contains(vehicleId)) {
+            if (vehicleId.equals(vehicleInIntersection)) {
+                return true; // Continúa cruzando
+            }
+        }
+        
+        // 2. Si la intersección está libre
+        if (vehicleInIntersection == null) {
+            // 2a. Vehículos que estaban delante de la ambulancia actual tienen prioridad
+            if (vehiclesAheadOfCurrentAmbulance.contains(vehicleId)) {
+                vehicleInIntersection = vehicleId;
+                intersectionQueue.remove(vehicleId);
+                vehiclesAlreadyCrossing.add(vehicleId);
+                vehiclesAheadOfCurrentAmbulance.remove(vehicleId); // Ya no está delante
+                System.out.println("[EMERGENCIA] Vehículo " + vehicleId + " cruza (estaba delante de ambulancia " + currentAmbulance + ")");
+                return true;
+            }
+            
+            // 2b. Si no quedan vehículos delante, la ambulancia puede cruzar
+            if (vehiclesAheadOfCurrentAmbulance.isEmpty() && vehicleId.equals(currentAmbulance)) {
+                vehicleInIntersection = vehicleId;
+                intersectionQueue.remove(vehicleId);
+                vehiclesAlreadyCrossing.add(vehicleId);
+                ambulanceProcessingQueue.poll(); // Esta ambulancia ya procesada
+                System.out.println("[EMERGENCIA] Ambulancia " + vehicleId + " cruza (sin vehículos delante)");
+                return true;
+            }
+        } else if (vehicleId.equals(vehicleInIntersection)) {
+            return true; // Ya está dentro
+        }
+
+        // 3. Todos los demás vehículos deben esperar
         if (!intersectionQueue.contains(vehicleId)) {
             intersectionQueue.add(vehicleId);
-            System.out.println("Vehículo " + vehicleId + (emergencyActive ? " (espera prioridad emergencia)" : "") +
-                    " agregado a cola intersección pos " + getQueuePosition(intersectionQueue, vehicleId));
+            if (isEmergency && !vehicleId.equals(currentAmbulance)) {
+                System.out.println("[EMERGENCIA] Ambulancia " + vehicleId + " espera (otra ambulancia " + currentAmbulance + " tiene prioridad)");
+            } else {
+                System.out.println("Vehículo " + vehicleId + " espera (ambulancia " + currentAmbulance + " tiene prioridad)");
+            }
         }
         return false;
     }
@@ -347,23 +428,28 @@ public class CollisionManager {
     
     /**
      * Notifica que un vehículo salió de la intersección
-     * NUEVO: Inicia el periodo de espera de 10 ticks para el siguiente vehículo
+     * NUEVO: Maneja la lógica de ambulancias y vehículos que terminan de cruzar
      */
     public void vehicleExitedIntersection(String vehicleId) {
         VehiclePosition pos = vehiclePositions.get(vehicleId);
         if (pos != null && !isInIntersectionZone(pos.x, pos.y)) {
             if (vehicleId.equals(vehicleInIntersection)) {
                 vehicleInIntersection = null;
-                // Si no hay emergencias activas, aplicar espera; de lo contrario, liberar inmediatamente
-                if (emergencyLaneQueue.isEmpty()) {
+                
+                // NUEVO: El vehículo terminó de cruzar, ya no está en la ecuación
+                vehiclesAlreadyCrossing.remove(vehicleId);
+                
+                // Si no hay ambulancias activas, aplicar espera normal
+                if (ambulanceProcessingQueue.isEmpty()) {
                     postExitWaitTicks = POST_EXIT_WAIT_DURATION;
                     System.out.println("Vehículo " + vehicleId + " salió - espera " + POST_EXIT_WAIT_DURATION + " ticks");
                 } else {
+                    // Con ambulancias activas, no hay espera - procesamiento inmediato
                     postExitWaitTicks = 0;
-                    System.out.println("Vehículo " + vehicleId + " salió - prioridad emergencia continua, sin espera");
+                    System.out.println("Vehículo " + vehicleId + " salió - procesando siguiente inmediatamente (ambulancia activa)");
                 }
                 
-                processIntersectionQueue(); // Procesar siguiente en cola (pero estará bloqueado por espera)
+                processIntersectionQueue();
             }
         }
     }
@@ -407,12 +493,18 @@ public class CollisionManager {
         vehicleInIntersection = null;
         intersectionQueue.clear();
         waitingZoneQueue.clear();
-    emergencyLaneQueue.clear();
-    emergencyLaneIndex.clear();
-    emergencyCountPerLane.clear();
-    emergencyFlag.clear();
-    vehicleLane.clear();
-        System.out.println("Intersección liberada forzosamente");
+        emergencyLaneQueue.clear();
+        emergencyLaneIndex.clear();
+        emergencyCountPerLane.clear();
+        emergencyFlag.clear();
+        vehicleLane.clear();
+        
+        // NUEVO: Limpiar estructuras de ambulancias
+        vehiclesAlreadyCrossing.clear();
+        vehiclesAheadOfAmbulance.clear();
+        ambulanceProcessingQueue.clear();
+        
+        System.out.println("Intersección liberada forzosamente - sistema de ambulancias reiniciado");
     }
     
     public boolean isVehicleWaiting(String vehicleId) {
@@ -449,14 +541,29 @@ public class CollisionManager {
     }
     
     /**
-     * Debug del estado con información de colas
+     * Debug del estado con información de colas y ambulancias
      */
     public void printStatus() {
-        System.out.println("=== COLLISION MANAGER STATUS (FIFO) ===");
+        System.out.println("=== COLLISION MANAGER STATUS (AMBULANCIAS MEJORADAS) ===");
         System.out.println("Vehículo en intersección: " + vehicleInIntersection);
         System.out.println("Cola de intersección (" + intersectionQueue.size() + "): " + intersectionQueue);
         System.out.println("Cola de zona de espera (" + waitingZoneQueue.size() + "): " + waitingZoneQueue);
         System.out.println("Vehículos tracked: " + vehiclePositions.size());
+        
+        // NUEVO: Información de ambulancias
+        if (!ambulanceProcessingQueue.isEmpty()) {
+            System.out.println("Ambulancias en cola: " + ambulanceProcessingQueue);
+            String currentAmb = ambulanceProcessingQueue.peek();
+            if (currentAmb != null) {
+                List<String> ahead = vehiclesAheadOfAmbulance.get(currentAmb);
+                System.out.println("Vehículos delante de " + currentAmb + ": " + (ahead != null ? ahead : "[]"));
+            }
+        }
+        
+        if (!vehiclesAlreadyCrossing.isEmpty()) {
+            System.out.println("Vehículos ya cruzando (no se pueden interrumpir): " + vehiclesAlreadyCrossing);
+        }
+        
         if (!emergencyLaneQueue.isEmpty()) {
             System.out.print("Lanes emergencia prioridad: [");
             emergencyLaneQueue.forEach(el -> System.out.print(el.lane + "(first=" + el.firstEmergencyArrivalOrder + ") "));
@@ -468,11 +575,15 @@ public class CollisionManager {
             boolean inIntersection = isInIntersectionZone(pos.x, pos.y);
             boolean inWaiting = isInWaitingZone(pos.x, pos.y);
             Long arrival = vehicleArrivalTime.get(entry.getKey());
+            boolean isEmergency = emergencyFlag.getOrDefault(entry.getKey(), false);
+            boolean alreadyCrossing = vehiclesAlreadyCrossing.contains(entry.getKey());
             
             System.out.println("  " + entry.getKey() + ": " + pos + 
                              " [Llegada: " + arrival + "]" +
                              (inIntersection ? " [INTERSECCIÓN]" : "") +
-                             (inWaiting ? " [ESPERA]" : ""));
+                             (inWaiting ? " [ESPERA]" : "") +
+                             (isEmergency ? " [AMBULANCIA]" : "") +
+                             (alreadyCrossing ? " [CRUZANDO]" : ""));
         }
         
         // Mostrar colas por spawn

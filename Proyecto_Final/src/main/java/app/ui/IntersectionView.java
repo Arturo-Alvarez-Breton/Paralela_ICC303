@@ -9,6 +9,8 @@ import app.model.Intersection;
 import app.model.TrafficLight;
 import app.model.enums.DirectionEnum;
 import app.model.enums.VehicleTypeEnum;
+import javafx.application.Platform;
+import javafx.scene.control.Button;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -53,10 +55,8 @@ public class IntersectionView extends Pane {
             initializeTrafficControl();
         }
         
-        // Initialize vehicle control for Scenario 1
-        if (scenarioNumber == 1) {
-            initializeVehicleControl();
-        }
+        // Initialize vehicle control for both scenarios
+        initializeVehicleControl();
     }
 
     /**
@@ -758,6 +758,7 @@ public class IntersectionView extends Pane {
         addTitleScenario2();
         addHighwayRulesPanel();
         addTrafficControlPanel();
+        addVehicleControlPanelScenario2(); // NUEVO: Panel de control de vehículos para Escenario 2
         addBackButton();
     }
 
@@ -1134,6 +1135,106 @@ public class IntersectionView extends Pane {
         this.getChildren().add(toggleButton);
 
         // Status text positioned to the right of the button
+    }
+
+    /**
+     * Adds vehicle control panel for Scenario 2 (Highway)
+     */
+    private void addVehicleControlPanelScenario2() {
+        int panelX = LaunchView.WIDTH - 250;
+        int panelY = 450; // Positioned below traffic control panel
+        int panelWidth = 240;
+        int panelHeight = 250;
+        
+        // Panel de fondo
+        Rectangle controlPanel = new Rectangle(panelX, panelY, panelWidth, panelHeight);
+        controlPanel.setArcWidth(8);
+        controlPanel.setArcHeight(8);
+        controlPanel.setFill(Color.color(0.2, 0.2, 0.2, 0.8));
+        controlPanel.setStroke(Color.ORANGE);
+        controlPanel.setStrokeWidth(2);
+        this.getChildren().add(controlPanel);
+        
+        // Título del panel
+        Text panelTitle = new Text(panelX + 10, panelY + 25, "Control de Vehículos");
+        panelTitle.setFill(Color.ORANGE);
+        panelTitle.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        this.getChildren().add(panelTitle);
+        
+        int buttonY = panelY + 50;
+        int buttonSpacing = 35;
+        
+        // Botón para spawn manual
+        Button spawnButton = new Button("Crear Vehículo");
+        spawnButton.setLayoutX(panelX + 10);
+        spawnButton.setLayoutY(buttonY);
+        spawnButton.setPrefSize(100, 25);
+        spawnButton.setOnAction(e -> {
+            if (vehicleController != null) {
+                vehicleController.spawnRandomVehicle();
+            }
+        });
+        this.getChildren().add(spawnButton);
+        
+        // Botón toggle auto-spawn
+        Button autoSpawnButton = new Button("Auto-Spawn: OFF");
+        autoSpawnButton.setLayoutX(panelX + 120);
+        autoSpawnButton.setLayoutY(buttonY);
+        autoSpawnButton.setPrefSize(100, 25);
+        autoSpawnButton.setOnAction(e -> {
+            if (vehicleController != null) {
+                boolean currentState = vehicleController.isAutoSpawnEnabled();
+                vehicleController.setAutoSpawn(!currentState);
+                autoSpawnButton.setText("Auto-Spawn: " + (!currentState ? "ON" : "OFF"));
+            }
+        });
+        this.getChildren().add(autoSpawnButton);
+        
+        buttonY += buttonSpacing;
+        
+        // Botón de simulación
+        Button startButton = new Button("Iniciar Simulación");
+        startButton.setLayoutX(panelX + 10);
+        startButton.setLayoutY(buttonY);
+        startButton.setPrefSize(100, 25);
+        startButton.setOnAction(e -> {
+            if (tickController != null) {
+                if (!tickController.isRunning()) {
+                    tickController.start();
+                    startButton.setText("Pausar");
+                } else {
+                    tickController.stop();
+                    startButton.setText("Reanudar");
+                }
+            }
+        });
+        this.getChildren().add(startButton);
+        
+        // Botón reset
+        Button resetButton = new Button("Reset");
+        resetButton.setLayoutX(panelX + 120);
+        resetButton.setLayoutY(buttonY);
+        resetButton.setPrefSize(100, 25);
+        resetButton.setOnAction(e -> {
+            if (vehicleController != null) {
+                vehicleController.resetCollisionSystem();
+            }
+        });
+        this.getChildren().add(resetButton);
+        
+        buttonY += buttonSpacing;
+        
+        // Status text
+        Text statusLabel = new Text(panelX + 10, buttonY + 15, "Estado: Sistema listo");
+        statusLabel.setFill(Color.WHITE);
+        statusLabel.setFont(Font.font("Arial", 11));
+        this.getChildren().add(statusLabel);
+        
+        // Información de vehículos activos
+        Text vehicleCountLabel = new Text(panelX + 10, buttonY + 35, "Vehículos: 0");
+        vehicleCountLabel.setFill(Color.WHITE);
+        vehicleCountLabel.setFont(Font.font("Arial", 11));
+        this.getChildren().add(vehicleCountLabel);
     }
 
     /**

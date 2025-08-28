@@ -312,13 +312,13 @@ public class ScenarioController {
         List<DirectionEnum> standardDirections = streetService.createStandardDirections();
 
         // === LADO SUPERIOR (NORTE) ===
-        // Carril azul (entrada): texto "SOUTH", flecha ↓ - vehículos van hacia el sur
+        // Carril azul (entrada): texto "SOUTH", flecha hacia abajo - vehiculos van hacia el sur
         Street norteEntrada = streetService.createStreet(
                 "calle_north_entrada", standardDirections,
                 centerX - laneWidth, centerY - intersectionSize/2 - streetLength,
                 laneWidth, streetLength
         );
-        // Carril rojo (salida): texto "NORTH", flecha ↑ - vehículos van hacia el norte
+        // Carril rojo (salida): texto "NORTH", flecha hacia arriba - vehiculos van hacia el norte
         Street norteSalida = streetService.createStreet(
                 "calle_north_salida", standardDirections,
                 centerX, centerY - intersectionSize/2 - streetLength,
@@ -326,13 +326,13 @@ public class ScenarioController {
         );
 
         // === LADO INFERIOR (SUR) ===
-        // Carril azul (entrada): texto "NORTH", flecha ↑ - vehículos van hacia el norte
+        // Carril azul (entrada): texto "NORTH", flecha hacia arriba - vehiculos van hacia el norte
         Street surEntrada = streetService.createStreet(
                 "calle_south_entrada", standardDirections,
                 centerX, centerY + intersectionSize/2,
                 laneWidth, streetLength
         );
-        // Carril rojo (salida): texto "SOUTH", flecha ↓ - vehículos van hacia el sur
+        // Carril rojo (salida): texto "SOUTH", flecha hacia abajo - vehiculos van hacia el sur
         Street surSalida = streetService.createStreet(
                 "calle_south_salida", standardDirections,
                 centerX - laneWidth, centerY + intersectionSize/2,
@@ -340,13 +340,13 @@ public class ScenarioController {
         );
 
         // === LADO DERECHO (ESTE) ===
-        // Carril azul (entrada): texto "WEST", flecha ← - vehículos van hacia el oeste
+        // Carril azul (entrada): texto "WEST", flecha hacia oeste - vehiculos van hacia el oeste
         Street esteEntrada = streetService.createStreet(
                 "calle_east_entrada", standardDirections,
                 centerX + intersectionSize/2, centerY - laneWidth,
                 streetLength, laneWidth
         );
-        // Carril rojo (salida): texto "EAST", flecha → - vehículos van hacia el este
+        // Carril rojo (salida): texto "EAST", flecha hacia este - vehiculos van hacia el este
         Street esteSalida = streetService.createStreet(
                 "calle_east_salida", standardDirections,
                 centerX + intersectionSize/2, centerY,
@@ -354,13 +354,13 @@ public class ScenarioController {
         );
 
         // === LADO IZQUIERDO (OESTE) ===
-        // Carril azul (entrada): texto "EAST", flecha → - vehículos van hacia el este
+        // Carril azul (entrada): texto "EAST", flecha hacia este - vehiculos van hacia el este
         Street oesteEntrada = streetService.createStreet(
                 "calle_west_entrada", standardDirections,
                 centerX - intersectionSize/2 - streetLength, centerY,
                 streetLength, laneWidth
         );
-        // Carril rojo (salida): texto "WEST", flecha ← - vehículos van hacia el oeste
+        // Carril rojo (salida): texto "WEST", flecha hacia oeste - vehiculos van hacia el oeste
         Street oesteSalida = streetService.createStreet(
                 "calle_west_salida", standardDirections,
                 centerX - intersectionSize/2 - streetLength, centerY - laneWidth,
