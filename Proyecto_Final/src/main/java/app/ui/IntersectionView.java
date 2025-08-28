@@ -1269,8 +1269,8 @@ public class IntersectionView extends Pane {
             "Recto",
             "S2-1 (Sur I2)", 
             "S2-2 (Sur I3)",
-            "N1-1 (Norte I2)", 
-            "N1-2 (Norte I3)",
+            "N2-1 (Norte I2)", 
+            "N2-2 (Norte I3)",
             "U-Turn"
         );
         westDestinationSelector.setValue("Recto");
@@ -1592,19 +1592,31 @@ public class IntersectionView extends Pane {
         } else if (destination.equals("U-Turn")) {
             direction = DirectionEnum.U_TURN;
         } else if (destination.contains("S1") || destination.contains("S2")) {
-            // Cualquier salida sur
-            direction = DirectionEnum.RIGHT; // Giro a la derecha hacia el sur
-            laneType = "_right_lane"; // Usar carril derecho para giros
+            // Cualquier salida sur - la dirección depende de la entrada
+            if (entry.equals("West")) {
+                direction = DirectionEnum.LEFT; // West gira izquierda para ir al sur
+                laneType = "_left_lane";
+            } else {
+                direction = DirectionEnum.RIGHT; // East gira derecha para ir al sur
+                laneType = "_right_lane";
+            }
         } else if (destination.contains("N1") || destination.contains("N2")) {
-            // Cualquier salida norte
-            direction = DirectionEnum.LEFT; // Giro a la izquierda hacia el norte
-            laneType = "_left_lane"; // Usar carril izquierdo para giros
+            // Cualquier salida norte - la dirección depende de la entrada
+            if (entry.equals("West")) {
+                direction = DirectionEnum.RIGHT; // West gira derecha para ir al norte
+                laneType = "_right_lane";
+            } else {
+                direction = DirectionEnum.LEFT; // East gira izquierda para ir al norte
+                laneType = "_left_lane";
+            }
         } else {
             direction = DirectionEnum.STRAIGHT;
         }
         
         // Construir el ID de la calle de entrada
-        String streetId = entry.toLowerCase() + laneType + "_segment1";
+        // Para West usar segment3 (más hacia la derecha), para otros usar segment1
+        String segmentNumber = entry.equals("West") ? "_segment3" : "_segment1";
+        String streetId = entry.toLowerCase() + laneType + segmentNumber;
         
         // Buscar la calle correspondiente
         Street entryStreet = scenarioController.getAllStreets().stream()
@@ -1613,9 +1625,16 @@ public class IntersectionView extends Pane {
             .orElse(null);
         
         if (entryStreet != null && vehicleController != null) {
-            boolean success = vehicleController.spawnVehicle(entryStreet, type, direction);
+            // Extraer el destino específico limpio (ej: "S1-1" de "S1-1 (Sur I2)")
+            String specificDestination = null;
+            if (!destination.equals("Recto") && !destination.equals("U-Turn")) {
+                specificDestination = destination.split(" ")[0]; // Tomar solo la parte antes del espacio
+                System.out.println("Destino específico extraído: '" + specificDestination + "' de '" + destination + "'");
+            }
+            
+            boolean success = vehicleController.spawnVehicle(entryStreet, type, direction, specificDestination);
             System.out.println("Creando vehículo " + type + " desde " + entry + " hacia " + destination + 
-                             " en calle " + streetId + " - " + (success ? "Éxito" : "Falló"));
+                             " (específico: " + specificDestination + ") en calle " + streetId + " - " + (success ? "Éxito" : "Falló"));
         } else {
             System.out.println("Error: No se encontró la calle " + streetId + " o vehicleController es null");
         }

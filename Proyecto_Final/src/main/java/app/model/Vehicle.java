@@ -1,24 +1,35 @@
     package app.model;
 
-    import app.model.enums.DirectionEnum;
-    import app.model.enums.VehicleTypeEnum;
     import java.util.concurrent.atomic.AtomicLong;
 
-    public class Vehicle {
-        private String id;
-        private VehicleTypeEnum type;
-        private DirectionEnum direction;
-        private static final AtomicLong counter = new AtomicLong(0);
-        private long creationTime;
-        private long entryTime;
-        private long exitTime;
+    import app.model.enums.DirectionEnum;
+    import app.model.enums.VehicleTypeEnum;
 
-        public Vehicle(VehicleTypeEnum type, DirectionEnum direction) {
-            this.id = "V" + counter.incrementAndGet();
-            this.type = type;
-            this.direction = direction;
-            this.creationTime = System.currentTimeMillis();
-        }
+    public class Vehicle {
+    private String id;
+    private VehicleTypeEnum type;
+    private DirectionEnum direction;
+    private String specificDestination; // Nuevo campo para destino específico (ej: "S1-1", "S1-2")
+    private static final AtomicLong counter = new AtomicLong(0);
+    private long creationTime;
+    private long entryTime;
+    private long exitTime;
+    
+    public Vehicle(VehicleTypeEnum type, DirectionEnum direction) {
+        this.id = "V" + counter.incrementAndGet();
+        this.type = type;
+        this.direction = direction;
+        this.creationTime = System.currentTimeMillis();
+    }
+
+    // Nuevo constructor con destino específico
+    public Vehicle(VehicleTypeEnum type, DirectionEnum direction, String specificDestination) {
+        this.id = "V" + counter.incrementAndGet();
+        this.type = type;
+        this.direction = direction;
+        this.specificDestination = specificDestination;
+        this.creationTime = System.currentTimeMillis();
+    }
 
         public String getId() {
             return id;
@@ -44,10 +55,15 @@
         public void setExitTime(long exitTime) {
             this.exitTime = exitTime;
         }
-        public long getArrivalOrder() {
-            return creationTime;
-        }
-
+    public long getArrivalOrder() {
+        return creationTime;
     }
-
-
+    
+    public String getSpecificDestination() {
+        return specificDestination;
+    }
+    
+    public void setSpecificDestination(String specificDestination) {
+        this.specificDestination = specificDestination;
+    }
+}

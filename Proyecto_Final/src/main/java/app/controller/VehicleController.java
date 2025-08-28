@@ -122,8 +122,15 @@ public class VehicleController implements TickController.TickListener {
      * Intenta crear un vehículo, retorna true si tuvo éxito
      */
     private boolean trySpawnVehicle(Street entryStreet, VehicleTypeEnum type, DirectionEnum direction) {
+        return trySpawnVehicle(entryStreet, type, direction, null);
+    }
+    
+    /**
+     * Intenta crear un vehículo con destino específico, retorna true si tuvo éxito
+     */
+    private boolean trySpawnVehicle(Street entryStreet, VehicleTypeEnum type, DirectionEnum direction, String specificDestination) {
         // Calcular posición inicial y ruta completa
-        VehiclePath path = calculateVehiclePath(entryStreet, direction);
+        VehiclePath path = calculateVehiclePath(entryStreet, direction, specificDestination);
         if (path == null) return false;
         
         // Determinar dirección de spawn
@@ -135,8 +142,13 @@ public class VehicleController implements TickController.TickListener {
             return false; // No crear el vehículo si hay conflicto
         }
         
-        // Crear modelo de vehículo
-        Vehicle vehicle = new Vehicle(type, direction);
+        // Crear modelo de vehículo con destino específico
+        Vehicle vehicle;
+        if (specificDestination != null) {
+            vehicle = new Vehicle(type, direction, specificDestination);
+        } else {
+            vehicle = new Vehicle(type, direction);
+        }
         
         // Crear vista visual
         VehicleView vehicleView = createVehicleView(vehicle, path.getStartX(), path.getStartY(), entryStreet);
@@ -162,7 +174,14 @@ public class VehicleController implements TickController.TickListener {
      * Método público para crear un vehículo específico
      */
     public boolean spawnVehicle(Street entryStreet, VehicleTypeEnum type, DirectionEnum direction) {
-        return trySpawnVehicle(entryStreet, type, direction);
+        return trySpawnVehicle(entryStreet, type, direction, null);
+    }
+    
+    /**
+     * Método público para crear un vehículo específico con destino específico
+     */
+    public boolean spawnVehicle(Street entryStreet, VehicleTypeEnum type, DirectionEnum direction, String specificDestination) {
+        return trySpawnVehicle(entryStreet, type, direction, specificDestination);
     }
     
     /**
@@ -184,6 +203,13 @@ public class VehicleController implements TickController.TickListener {
      * Calcula la ruta completa que debe seguir un vehículo
      */
     private VehiclePath calculateVehiclePath(Street entryStreet, DirectionEnum direction) {
+        return calculateVehiclePath(entryStreet, direction, null);
+    }
+    
+    /**
+     * Calcula la ruta completa que debe seguir un vehículo con destino específico
+     */
+    private VehiclePath calculateVehiclePath(Street entryStreet, DirectionEnum direction, String specificDestination) {
         String streetId = entryStreet.getId();
         String entryDirection = parseDirectionFromStreetId(streetId);
         
@@ -244,7 +270,12 @@ public class VehicleController implements TickController.TickListener {
         }
         
         // Calcular ruta completa basada en la dirección elegida
-        return new VehiclePath(startX, startY, entryDirection, direction, scenarioController);
+        if (specificDestination != null) {
+            System.out.println("Creando VehiclePath con destino específico: " + specificDestination);
+            return new VehiclePath(startX, startY, entryDirection, direction, scenarioController, specificDestination);
+        } else {
+            return new VehiclePath(startX, startY, entryDirection, direction, scenarioController);
+        }
     }
     
     /**

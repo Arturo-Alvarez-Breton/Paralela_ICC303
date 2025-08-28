@@ -18,6 +18,7 @@ public class VehiclePath {
     private double currentX, currentY;
     private boolean completed;
     private final ScenarioController scenarioController;
+    private final String specificDestination; // Nuevo campo para destino específico
     
     // Para debug: almacenar la dirección de entrada
     private final String entryDirection;
@@ -34,12 +35,20 @@ public class VehiclePath {
      * Constructor que calcula la ruta completa
      */
     public VehiclePath(double startX, double startY, String entryDirection, DirectionEnum turnDirection, ScenarioController scenarioController) {
+        this(startX, startY, entryDirection, turnDirection, scenarioController, null);
+    }
+
+    /**
+     * Constructor que calcula la ruta completa con destino específico
+     */
+    public VehiclePath(double startX, double startY, String entryDirection, DirectionEnum turnDirection, ScenarioController scenarioController, String specificDestination) {
         this.waypoints = new ArrayList<>();
         this.currentWaypointIndex = 0;
         this.currentX = startX;
         this.currentY = startY;
         this.completed = false;
         this.scenarioController = scenarioController;
+        this.specificDestination = specificDestination;
         
         // Almacenar la dirección de entrada para debug
         this.entryDirection = entryDirection;
@@ -993,39 +1002,85 @@ public class VehiclePath {
             // Giro derecha hacia sur
             exitType = "south";
             
-            // Determinar intersección basándose en el carril específico
-            String currentExitSide = determineExitSide(startY, "south");
-            
-            // East puede ir a S1-1 (intersection_2) o S1-2 (intersection_3)
-            if (currentExitSide.equals("left")) {
-                // Carril superior/izquierdo -> S1-1 (intersection_2)
-                targetIntersection = "intersection_2";
-                exitSide = "left"; // S1
-                System.out.println("East hacia S1-1 -> intersection_2");
+            // NUEVA LÓGICA: Usar destino específico si está disponible
+            if (specificDestination != null) {
+                if (specificDestination.contains("S1-1")) {
+                    // Destino específico S1-1 -> intersection_2
+                    targetIntersection = "intersection_2";
+                    exitSide = "left"; // S1
+                    System.out.println("East hacia S1-1 -> intersection_2 (DESTINO ESPECÍFICO)");
+                } else if (specificDestination.contains("S1-2")) {
+                    // Destino específico S1-2 -> intersection_3
+                    targetIntersection = "intersection_3";
+                    exitSide = "left"; // S1
+                    System.out.println("East hacia S1-2 -> intersection_3 (DESTINO ESPECÍFICO)");
+                } else {
+                    // Fallback a lógica original
+                    String currentExitSide = determineExitSide(startY, "south");
+                    if (currentExitSide.equals("left")) {
+                        targetIntersection = "intersection_2";
+                        exitSide = "left";
+                        System.out.println("East hacia S1-1 -> intersection_2 (FALLBACK)");
+                    } else {
+                        targetIntersection = "intersection_3";
+                        exitSide = "left";
+                        System.out.println("East hacia S1-2 -> intersection_3 (FALLBACK)");
+                    }
+                }
             } else {
-                // Carril inferior/derecho -> S1-2 (intersection_3) 
-                targetIntersection = "intersection_3";
-                exitSide = "left"; // S1
-                System.out.println("East hacia S1-2 -> intersection_3");
+                // Lógica original cuando no hay destino específico
+                String currentExitSide = determineExitSide(startY, "south");
+                if (currentExitSide.equals("left")) {
+                    targetIntersection = "intersection_2";
+                    exitSide = "left";
+                    System.out.println("East hacia S1-1 -> intersection_2 (LÓGICA ORIGINAL)");
+                } else {
+                    targetIntersection = "intersection_3";
+                    exitSide = "left";
+                    System.out.println("East hacia S1-2 -> intersection_3 (LÓGICA ORIGINAL)");
+                }
             }
         } else if (turnDirection == DirectionEnum.LEFT) {
             // Giro izquierda hacia norte - N2-1 o N2-2
             exitType = "north";
             
-            // Determinar intersección basándose en el carril específico
-            String currentExitSide = determineExitSide(startY, "north");
-            
-            // East puede ir a N2-1 (intersection_2) o N2-2 (intersection_3)
-            if (currentExitSide.equals("left")) {
-                // Carril superior/izquierdo -> N2-1 (intersection_2)
-                targetIntersection = "intersection_2";
-                exitSide = "right"; // N2
-                System.out.println("East hacia N2-1 -> intersection_2");
+            // NUEVA LÓGICA: Usar destino específico si está disponible
+            if (specificDestination != null) {
+                if (specificDestination.contains("N2-1")) {
+                    // Destino específico N2-1 -> intersection_2
+                    targetIntersection = "intersection_2";
+                    exitSide = "right"; // N2
+                    System.out.println("East hacia N2-1 -> intersection_2 (DESTINO ESPECÍFICO)");
+                } else if (specificDestination.contains("N2-2")) {
+                    // Destino específico N2-2 -> intersection_3
+                    targetIntersection = "intersection_3";
+                    exitSide = "right"; // N2
+                    System.out.println("East hacia N2-2 -> intersection_3 (DESTINO ESPECÍFICO)");
+                } else {
+                    // Fallback a lógica original
+                    String currentExitSide = determineExitSide(startY, "north");
+                    if (currentExitSide.equals("left")) {
+                        targetIntersection = "intersection_2";
+                        exitSide = "right";
+                        System.out.println("East hacia N2-1 -> intersection_2 (FALLBACK)");
+                    } else {
+                        targetIntersection = "intersection_3";
+                        exitSide = "right";
+                        System.out.println("East hacia N2-2 -> intersection_3 (FALLBACK)");
+                    }
+                }
             } else {
-                // Carril inferior/derecho -> N2-2 (intersection_3)
-                targetIntersection = "intersection_3"; 
-                exitSide = "right"; // N2
-                System.out.println("East hacia N2-2 -> intersection_3");
+                // Lógica original cuando no hay destino específico
+                String currentExitSide = determineExitSide(startY, "north");
+                if (currentExitSide.equals("left")) {
+                    targetIntersection = "intersection_2";
+                    exitSide = "right";
+                    System.out.println("East hacia N2-1 -> intersection_2 (LÓGICA ORIGINAL)");
+                } else {
+                    targetIntersection = "intersection_3";
+                    exitSide = "right";
+                    System.out.println("East hacia N2-2 -> intersection_3 (LÓGICA ORIGINAL)");
+                }
             }
         }
         
@@ -1077,42 +1132,92 @@ public class VehiclePath {
         String exitSide = null;
         
         if (turnDirection == DirectionEnum.RIGHT) {
-            // Giro derecha hacia norte - N1-1 o N1-2
+            // Giro derecha hacia norte - N2-1 o N2-2
             exitType = "north";
             
-            // Determinar intersección basándose en el carril específico
-            String currentExitSide = determineExitSide(startY, "north");
-            
-            // West puede ir a N1-1 (intersection_2) o N1-2 (intersection_3)
-            if (currentExitSide.equals("left")) {
-                // Carril superior/izquierdo -> N1-1 (intersection_2)
-                targetIntersection = "intersection_2";
-                exitSide = "left"; // N1
-                System.out.println("West hacia N1-1 -> intersection_2");
+            // NUEVA LÓGICA: Usar destino específico si está disponible
+            if (specificDestination != null) {
+                if (specificDestination.contains("N2-1") || specificDestination.contains("N1-1")) {
+                    // Destino específico N2-1 o N1-1 -> intersection_2
+                    targetIntersection = "intersection_2";
+                    exitSide = "right"; // N2 
+                    System.out.println("West hacia N2-1/N1-1 -> intersection_2 (DESTINO ESPECÍFICO)");
+                } else if (specificDestination.contains("N2-2") || specificDestination.contains("N1-2")) {
+                    // Destino específico N2-2 o N1-2 -> intersection_3
+                    targetIntersection = "intersection_3";
+                    exitSide = "right"; // N2
+                    System.out.println("West hacia N2-2/N1-2 -> intersection_3 (DESTINO ESPECÍFICO)");
+                } else {
+                    // Fallback a lógica original
+                    String currentExitSide = determineExitSide(startY, "north");
+                    if (currentExitSide.equals("left")) {
+                        targetIntersection = "intersection_2";
+                        exitSide = "left"; // N1
+                        System.out.println("West hacia N1-1 -> intersection_2 (FALLBACK)");
+                    } else {
+                        targetIntersection = "intersection_3";
+                        exitSide = "left"; // N1
+                        System.out.println("West hacia N1-2 -> intersection_3 (FALLBACK)");
+                    }
+                }
             } else {
-                // Carril inferior/derecho -> N1-2 (intersection_3)
-                targetIntersection = "intersection_3";
-                exitSide = "left"; // N1
-                System.out.println("West hacia N1-2 -> intersection_3");
+                // Lógica original cuando no hay destino específico
+                String currentExitSide = determineExitSide(startY, "north");
+                if (currentExitSide.equals("left")) {
+                    // Carril superior/izquierdo -> N1-1 (intersection_2)
+                    targetIntersection = "intersection_2";
+                    exitSide = "left"; // N1
+                    System.out.println("West hacia N1-1 -> intersection_2 (LÓGICA ORIGINAL)");
+                } else {
+                    // Carril inferior/derecho -> N1-2 (intersection_3)
+                    targetIntersection = "intersection_3";
+                    exitSide = "left"; // N1
+                    System.out.println("West hacia N1-2 -> intersection_3 (LÓGICA ORIGINAL)");
+                }
             }
         } else if (turnDirection == DirectionEnum.LEFT) {
             // Giro izquierda hacia sur - S2-1 o S2-2
             exitType = "south";
             
-            // Determinar intersección basándose en el carril específico
-            String currentExitSide = determineExitSide(startY, "south");
-            
-            // West puede ir a S2-1 (intersection_2) o S2-2 (intersection_3)
-            if (currentExitSide.equals("left")) {
-                // Carril superior/izquierdo -> S2-1 (intersection_2)
-                targetIntersection = "intersection_2";
-                exitSide = "right"; // S2
-                System.out.println("West hacia S2-1 -> intersection_2");
+            // NUEVA LÓGICA: Usar destino específico si está disponible
+            if (specificDestination != null) {
+                if (specificDestination.contains("S2-1") || specificDestination.contains("S1-1")) {
+                    // Destino específico S2-1 o S1-1 -> intersection_2
+                    targetIntersection = "intersection_2";
+                    exitSide = "right"; // S2
+                    System.out.println("West hacia S2-1/S1-1 -> intersection_2 (DESTINO ESPECÍFICO)");
+                } else if (specificDestination.contains("S2-2") || specificDestination.contains("S1-2")) {
+                    // Destino específico S2-2 o S1-2 -> intersection_3
+                    targetIntersection = "intersection_3";
+                    exitSide = "right"; // S2
+                    System.out.println("West hacia S2-2/S1-2 -> intersection_3 (DESTINO ESPECÍFICO)");
+                } else {
+                    // Fallback a lógica original
+                    String currentExitSide = determineExitSide(startY, "south");
+                    if (currentExitSide.equals("left")) {
+                        targetIntersection = "intersection_2";
+                        exitSide = "right"; // S2
+                        System.out.println("West hacia S2-1 -> intersection_2 (FALLBACK)");
+                    } else {
+                        targetIntersection = "intersection_3";
+                        exitSide = "right"; // S2
+                        System.out.println("West hacia S2-2 -> intersection_3 (FALLBACK)");
+                    }
+                }
             } else {
-                // Carril inferior/derecho -> S2-2 (intersection_3)
-                targetIntersection = "intersection_3";
-                exitSide = "right"; // S2
-                System.out.println("West hacia S2-2 -> intersection_3");
+                // Lógica original cuando no hay destino específico
+                String currentExitSide = determineExitSide(startY, "south");
+                if (currentExitSide.equals("left")) {
+                    // Carril superior/izquierdo -> S2-1 (intersection_2)
+                    targetIntersection = "intersection_2";
+                    exitSide = "right"; // S2
+                    System.out.println("West hacia S2-1 -> intersection_2 (LÓGICA ORIGINAL)");
+                } else {
+                    // Carril inferior/derecho -> S2-2 (intersection_3)
+                    targetIntersection = "intersection_3";
+                    exitSide = "right"; // S2
+                    System.out.println("West hacia S2-2 -> intersection_3 (LÓGICA ORIGINAL)");
+                }
             }
         }
         
