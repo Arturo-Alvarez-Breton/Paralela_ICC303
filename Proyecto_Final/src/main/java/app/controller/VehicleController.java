@@ -43,9 +43,9 @@ public class VehicleController implements TickController.TickListener {
     private static final double EMERGENCY_PROBABILITY = 0.15; // 15% de vehículos de emergencia
     private long lastSpawnTick = 0;
     
-    // Velocidades (píxeles por tick)
+    // Velocidades (píxeles por tick) - IGUALADAS PARA AMBOS TIPOS
     private static final double NORMAL_SPEED = 1.5;
-    private static final double EMERGENCY_SPEED = 2.2;
+    private static final double EMERGENCY_SPEED = 1.5;
     
     public VehicleController(Pane scene, ScenarioController scenarioController, TickController tickController) {
         this.scene = scene;
