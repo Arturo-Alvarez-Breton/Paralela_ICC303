@@ -11,6 +11,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 import app.service.StreetService;
 
@@ -39,12 +40,12 @@ public class CollisionManager {
     private int postExitWaitTicks = 0;
     private static final int POST_EXIT_WAIT_DURATION = 10;
     
-    // Colas FIFO para diferentes zonas
-    private final Queue<String> intersectionQueue = new LinkedBlockingQueue<>();
-    private final Queue<String> waitingZoneQueue = new LinkedBlockingQueue<>();
+    // Colas de prioridad para diferentes zonas
+    private final PriorityBlockingQueue<PriorityVehicle> intersectionQueue = new PriorityBlockingQueue<>();
+    private final PriorityBlockingQueue<PriorityVehicle> waitingZoneQueue = new PriorityBlockingQueue<>();
     
-    // Colas FIFO para spawn por dirección
-    private final Map<String, Queue<String>> spawnQueues = new ConcurrentHashMap<>();
+    // Colas de prioridad para spawn por dirección
+    private final Map<String, PriorityBlockingQueue<PriorityVehicle>> spawnQueues = new ConcurrentHashMap<>();
     
     // Tracking de posiciones y orden de llegada
     private final Map<String, VehiclePosition> vehiclePositions = new ConcurrentHashMap<>();
@@ -67,6 +68,67 @@ public class CollisionManager {
     private final Queue<String> ambulanceProcessingQueue = new LinkedBlockingQueue<>();
     // NUEVO: Vehículos que han salido de la intersección y son completamente libres
     private final Set<String> vehiclesPostIntersection = new HashSet<>();
+    
+    /**
+     * Elemento de cola con prioridad para intersección
+     */
+    private static class PriorityVehicle implements Comparable<PriorityVehicle> {
+        final String vehicleId;
+        final long arrivalOrder;
+        final boolean isEmergency;
+        final boolean hasVehiclesAhead; // Si es ambulancia con vehículos delante
+        
+        PriorityVehicle(String vehicleId, long arrivalOrder, boolean isEmergency, boolean hasVehiclesAhead) {
+            this.vehicleId = vehicleId;
+            this.arrivalOrder = arrivalOrder;
+            this.isEmergency = isEmergency;
+            this.hasVehiclesAhead = hasVehiclesAhead;
+        }
+        
+        @Override
+        public int compareTo(PriorityVehicle other) {
+            // 1. Vehículos normales que estaban delante de ambulancia (prioridad máxima)
+            if (!this.isEmergency && this.hasVehiclesAhead && other.isEmergency) {
+                return -1; // Este vehículo normal tiene prioridad sobre ambulancia
+            }
+            if (this.isEmergency && !other.isEmergency && other.hasVehiclesAhead) {
+                return 1; // El otro vehículo normal tiene prioridad
+            }
+            
+            // 2. Entre ambulancias: por orden de llegada
+            if (this.isEmergency && other.isEmergency) {
+                return Long.compare(this.arrivalOrder, other.arrivalOrder);
+            }
+            
+            // 3. Ambulancias tienen prioridad sobre vehículos normales (que no estaban delante)
+            if (this.isEmergency && !other.isEmergency && !other.hasVehiclesAhead) {
+                return -1;
+            }
+            if (!this.isEmergency && !this.hasVehiclesAhead && other.isEmergency) {
+                return 1;
+            }
+            
+            // 4. Entre vehículos normales: FIFO (orden de llegada)
+            return Long.compare(this.arrivalOrder, other.arrivalOrder);
+        }
+        
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof PriorityVehicle pv && pv.vehicleId.equals(this.vehicleId);
+        }
+        
+        @Override
+        public int hashCode() {
+            return vehicleId.hashCode();
+        }
+        
+        @Override
+        public String toString() {
+            return vehicleId + "(arr=" + arrivalOrder + 
+                   (isEmergency ? ",EMG" : "") + 
+                   (hasVehiclesAhead ? ",AHEAD" : "") + ")";
+        }
+    }
     
     /**
      * Registra un vehículo para tracking de colisiones con entrada de spawn segura
@@ -99,7 +161,7 @@ public class CollisionManager {
         vehicleArrivalTime.put(vehicleId, order);
         vehicleLane.put(vehicleId, spawnDirection);
         emergencyFlag.put(vehicleId, isEmergency);
-        spawnQueues.computeIfAbsent(spawnDirection, k -> new LinkedBlockingQueue<>());
+        spawnQueues.computeIfAbsent(spawnDirection, k -> new PriorityBlockingQueue<>());
 
         if (isEmergency) {
             emergencyCountPerLane.merge(spawnDirection, 1, Integer::sum);
@@ -191,9 +253,9 @@ public class CollisionManager {
         }
         
         // Remover de todas las colas
-        intersectionQueue.remove(vehicleId);
-        waitingZoneQueue.remove(vehicleId);
-        spawnQueues.values().forEach(queue -> queue.remove(vehicleId));
+        removePriorityVehicle(intersectionQueue, vehicleId);
+        removePriorityVehicle(waitingZoneQueue, vehicleId);
+        spawnQueues.values().forEach(queue -> removePriorityVehicle(queue, vehicleId));
         
         if (vehicleId.equals(vehicleInIntersection)) {
             vehicleInIntersection = null;
@@ -324,8 +386,8 @@ public class CollisionManager {
         
         // Si no hay emergencias activas, aplicar espera post-salida normal
         if (ambulanceProcessingQueue.isEmpty() && postExitWaitTicks > 0) {
-            if (!intersectionQueue.contains(vehicleId)) {
-                intersectionQueue.add(vehicleId);
+            if (!containsPriorityVehicle(intersectionQueue, vehicleId)) {
+                addToPriorityQueue(intersectionQueue, vehicleId);
                 System.out.println("Vehículo " + vehicleId + " agregado a cola - esperando " + postExitWaitTicks + " ticks post-salida");
             }
             return false;
@@ -334,9 +396,9 @@ public class CollisionManager {
         // === LÓGICA SIN AMBULANCIAS (normal FIFO) ===
         if (ambulanceProcessingQueue.isEmpty()) {
             if (vehicleInIntersection == null) {
-                if (intersectionQueue.isEmpty() || vehicleId.equals(intersectionQueue.peek())) {
+                if (intersectionQueue.isEmpty() || vehicleId.equals(peekPriorityQueue(intersectionQueue))) {
                     vehicleInIntersection = vehicleId;
-                    intersectionQueue.remove(vehicleId);
+                    removePriorityVehicle(intersectionQueue, vehicleId);
                     vehiclesAlreadyCrossing.add(vehicleId); // Marcar como "ya cruzando"
                     System.out.println("Vehículo " + vehicleId + " entra a la intersección (FIFO normal)");
                     return true;
@@ -346,8 +408,8 @@ public class CollisionManager {
             }
 
             // Agregar a cola si no está
-            if (!intersectionQueue.contains(vehicleId)) {
-                intersectionQueue.add(vehicleId);
+            if (!containsPriorityVehicle(intersectionQueue, vehicleId)) {
+                addToPriorityQueue(intersectionQueue, vehicleId);
                 System.out.println("Vehículo " + vehicleId + " agregado a cola intersección pos " + getQueuePosition(intersectionQueue, vehicleId));
             }
             return false;
@@ -372,7 +434,7 @@ public class CollisionManager {
             // 2a. Vehículos que estaban delante de la ambulancia actual tienen prioridad
             if (vehiclesAheadOfCurrentAmbulance.contains(vehicleId)) {
                 vehicleInIntersection = vehicleId;
-                intersectionQueue.remove(vehicleId);
+                removePriorityVehicle(intersectionQueue, vehicleId);
                 vehiclesAlreadyCrossing.add(vehicleId);
                 vehiclesAheadOfCurrentAmbulance.remove(vehicleId); // Ya no está delante
                 System.out.println("[EMERGENCIA] Vehículo " + vehicleId + " cruza (estaba delante de ambulancia " + currentAmbulance + ")");
@@ -382,7 +444,7 @@ public class CollisionManager {
             // 2b. Si no quedan vehículos delante, la ambulancia puede cruzar
             if (vehiclesAheadOfCurrentAmbulance.isEmpty() && vehicleId.equals(currentAmbulance)) {
                 vehicleInIntersection = vehicleId;
-                intersectionQueue.remove(vehicleId);
+                removePriorityVehicle(intersectionQueue, vehicleId);
                 vehiclesAlreadyCrossing.add(vehicleId);
                 ambulanceProcessingQueue.poll(); // Esta ambulancia ya procesada
                 System.out.println("[EMERGENCIA] Ambulancia " + vehicleId + " cruza (sin vehículos delante)");
@@ -393,8 +455,8 @@ public class CollisionManager {
         }
 
         // 3. Todos los demás vehículos deben esperar
-        if (!intersectionQueue.contains(vehicleId)) {
-            intersectionQueue.add(vehicleId);
+        if (!containsPriorityVehicle(intersectionQueue, vehicleId)) {
+            addToPriorityQueue(intersectionQueue, vehicleId);
             if (isEmergency && !vehicleId.equals(currentAmbulance)) {
                 System.out.println("[EMERGENCIA] Ambulancia " + vehicleId + " espera (otra ambulancia " + currentAmbulance + " tiene prioridad)");
             } else {
@@ -422,8 +484,8 @@ public class CollisionManager {
                     
                     if (myArrival != null && otherArrival != null && myArrival >= otherArrival) {
                         // El otro llegó primero o al mismo tiempo, debo esperar
-                        if (!waitingZoneQueue.contains(vehicleId)) {
-                            waitingZoneQueue.add(vehicleId);
+                        if (!containsPriorityVehicle(waitingZoneQueue, vehicleId)) {
+                            addToPriorityQueue(waitingZoneQueue, vehicleId);
                             System.out.println("Vehículo " + vehicleId + " agregado a cola de espera (posición " + 
                                               getQueuePosition(waitingZoneQueue, vehicleId) + ")");
                         }
@@ -434,7 +496,7 @@ public class CollisionManager {
         }
         
         // Remover de la cola de espera si puede pasar
-        waitingZoneQueue.remove(vehicleId);
+        removePriorityVehicle(waitingZoneQueue, vehicleId);
         return true;
     }
     
@@ -443,18 +505,18 @@ public class CollisionManager {
      */
     private void processIntersectionQueue() {
         if (!intersectionQueue.isEmpty()) {
-            String nextVehicle = intersectionQueue.peek();
+            String nextVehicle = peekPriorityQueue(intersectionQueue);
             System.out.println("Siguiente vehículo en cola para intersección: " + nextVehicle);
         }
     }
     
     /**
-     * Obtiene la posición de un vehículo en una cola
+     * Obtiene la posición de un vehículo en una cola de prioridad
      */
-    private int getQueuePosition(Queue<String> queue, String vehicleId) {
+    private int getQueuePosition(PriorityBlockingQueue<PriorityVehicle> queue, String vehicleId) {
         int position = 1;
-        for (String id : queue) {
-            if (id.equals(vehicleId)) {
+        for (PriorityVehicle pv : queue) {
+            if (pv.vehicleId.equals(vehicleId)) {
                 return position;
             }
             position++;
@@ -549,7 +611,8 @@ public class CollisionManager {
     }
     
     public boolean isVehicleWaiting(String vehicleId) {
-        return intersectionQueue.contains(vehicleId) || waitingZoneQueue.contains(vehicleId);
+        return containsPriorityVehicle(intersectionQueue, vehicleId) || 
+               containsPriorityVehicle(waitingZoneQueue, vehicleId);
     }
     
     public Set<String> getVehiclesInIntersection() {
@@ -561,7 +624,41 @@ public class CollisionManager {
     }
     
     public Set<String> getVehiclesInWaitingZone() {
-        return new HashSet<>(waitingZoneQueue);
+        Set<String> result = new HashSet<>();
+        for (PriorityVehicle pv : waitingZoneQueue) {
+            result.add(pv.vehicleId);
+        }
+        return result;
+    }
+    
+    // Métodos auxiliares para trabajar con PriorityVehicle
+    private boolean containsPriorityVehicle(PriorityBlockingQueue<PriorityVehicle> queue, String vehicleId) {
+        return queue.stream().anyMatch(pv -> pv.vehicleId.equals(vehicleId));
+    }
+    
+    private void addToPriorityQueue(PriorityBlockingQueue<PriorityVehicle> queue, String vehicleId) {
+        if (!containsPriorityVehicle(queue, vehicleId)) {
+            boolean isEmergency = emergencyFlag.getOrDefault(vehicleId, false);
+            long arrivalTime = vehicleArrivalTime.getOrDefault(vehicleId, System.currentTimeMillis());
+            List<String> vehiclesAheadList = vehiclesAheadOfAmbulance.getOrDefault(vehicleId, new ArrayList<>());
+            boolean hasVehiclesAhead = !vehiclesAheadList.isEmpty();
+            
+            queue.add(new PriorityVehicle(vehicleId, arrivalTime, isEmergency, hasVehiclesAhead));
+        }
+    }
+    
+    private String peekPriorityQueue(PriorityBlockingQueue<PriorityVehicle> queue) {
+        PriorityVehicle pv = queue.peek();
+        return pv != null ? pv.vehicleId : null;
+    }
+    
+    private void removePriorityVehicle(PriorityBlockingQueue<PriorityVehicle> queue, String vehicleId) {
+        queue.removeIf(pv -> pv.vehicleId.equals(vehicleId));
+    }
+    
+    private String pollPriorityQueue(PriorityBlockingQueue<PriorityVehicle> queue) {
+        PriorityVehicle pv = queue.poll();
+        return pv != null ? pv.vehicleId : null;
     }
     
     /**
@@ -634,9 +731,13 @@ public class CollisionManager {
         }
         
         // Mostrar colas por spawn
-        for (Map.Entry<String, Queue<String>> spawnEntry : spawnQueues.entrySet()) {
+        for (Map.Entry<String, PriorityBlockingQueue<PriorityVehicle>> spawnEntry : spawnQueues.entrySet()) {
             if (!spawnEntry.getValue().isEmpty()) {
-                System.out.println("Cola spawn " + spawnEntry.getKey() + ": " + spawnEntry.getValue());
+                List<String> vehicleIds = new ArrayList<>();
+                for (PriorityVehicle pv : spawnEntry.getValue()) {
+                    vehicleIds.add(pv.vehicleId);
+                }
+                System.out.println("Cola spawn " + spawnEntry.getKey() + ": " + vehicleIds);
             }
         }
         System.out.println("===============================");
