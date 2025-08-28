@@ -345,12 +345,22 @@ public class IntersectionView extends Pane {
     }
     
     /**
-     * Inicializa el sistema de control de vehículos para el Escenario 1
+     * Inicializa el sistema de control de vehículos
      */
     private void initializeVehicleControl() {
         this.tickController = new TickController();
-        this.vehicleController = new VehicleController(this, scenarioController, tickController);
-        System.out.println("Sistema de control de vehículos y ticks inicializado");
+        // VehicleController se inicializará después de crear TrafficController
+        System.out.println("Sistema de control de ticks inicializado");
+    }
+    
+    /**
+     * Inicializa el VehicleController con el TrafficController
+     */
+    private void initializeVehicleControllerWithTraffic() {
+        if (this.tickController != null) {
+            this.vehicleController = new VehicleController(this, scenarioController, tickController, trafficController);
+            System.out.println("Sistema de control de vehículos inicializado con semáforos");
+        }
     }
     
     /**
@@ -791,6 +801,9 @@ public class IntersectionView extends Pane {
             }
 
             System.out.println("Traffic control initialized with " + trafficLights.size() + " traffic lights using tick system");
+            
+            // Ahora inicializar VehicleController con el TrafficController
+            initializeVehicleControllerWithTraffic();
         }
     }
 
@@ -1163,16 +1176,16 @@ public class IntersectionView extends Pane {
         timingTitle.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
         this.getChildren().add(timingTitle);
 
-        // Traffic light timing slider
-        Slider timingSlider = new Slider(20, 300, 100); // Min: 20 ticks (1 sec), Max: 300 ticks (15 sec), Default: 100 ticks (5 sec)
+        // Traffic light timing slider - ESCENARIO 2: Rango 300-600 ticks
+        Slider timingSlider = new Slider(300, 600, 400); // Min: 300 ticks (15 sec), Max: 600 ticks (30 sec), Default: 400 ticks (20 sec)
         timingSlider.setLayoutX(panelX + 10);
         timingSlider.setLayoutY(panelY + 95);
         timingSlider.setPrefWidth(200);
         timingSlider.setPrefHeight(30);
         timingSlider.setShowTickLabels(true);
         timingSlider.setShowTickMarks(true);
-        timingSlider.setMajorTickUnit(60); // Every 3 seconds at 20 ticks/sec
-        timingSlider.setMinorTickCount(2);
+        timingSlider.setMajorTickUnit(100); // Cada 100 ticks (5 segundos)
+        timingSlider.setMinorTickCount(4); // 4 divisiones menores entre marcas principales
 
         timingSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (trafficController != null) {

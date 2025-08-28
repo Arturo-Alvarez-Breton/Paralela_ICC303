@@ -5,11 +5,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
+import app.model.Intersection;
 import app.model.Street;
+import app.model.TrafficLight;
 import app.model.Vehicle;
 import app.model.enums.DirectionEnum;
 import app.model.enums.VehicleTypeEnum;
@@ -26,6 +30,7 @@ public class VehicleController implements TickController.TickListener {
     private final Pane scene;
     private final ScenarioController scenarioController;
     private final TickController tickController;
+    private final TrafficController trafficController; // Nuevo campo para control de semáforos
     
     // Mapas para gestionar vehículos
     private final Map<String, Vehicle> activeVehicles;
@@ -34,6 +39,10 @@ public class VehicleController implements TickController.TickListener {
     
     // Sistema de colisiones y control de intersección
     private final CollisionManager collisionManager;
+    
+    // NUEVO: Sistema de control de intersecciones
+    private final Map<String, String> intersectionOccupancy; // intersectionId -> vehicleId que la ocupa
+    private final Map<String, Queue<String>> intersectionQueues; // intersectionId -> cola de vehículos esperando
     
     // Control de simulación
     private boolean autoSpawnEnabled = false;
@@ -47,18 +56,32 @@ public class VehicleController implements TickController.TickListener {
     private static final double NORMAL_SPEED = 1.5;
     private static final double EMERGENCY_SPEED = 1.5;
     
-    public VehicleController(Pane scene, ScenarioController scenarioController, TickController tickController) {
+    public VehicleController(Pane scene, ScenarioController scenarioController, TickController tickController, TrafficController trafficController) {
         this.scene = scene;
         this.scenarioController = scenarioController;
         this.tickController = tickController;
+        this.trafficController = trafficController;
         this.activeVehicles = new ConcurrentHashMap<>();
         this.vehicleViews = new ConcurrentHashMap<>();
         this.vehiclePaths = new ConcurrentHashMap<>();
         this.collisionManager = new CollisionManager();
         
+        // Inicializar sistema de control de intersecciones
+        this.intersectionOccupancy = new ConcurrentHashMap<>();
+        this.intersectionQueues = new ConcurrentHashMap<>();
+        
+        // Inicializar colas para intersection_2 e intersection_3 
+        this.intersectionQueues.put("intersection_2", new ConcurrentLinkedQueue<>());
+        this.intersectionQueues.put("intersection_3", new ConcurrentLinkedQueue<>());
+        
         // Registrarse como listener del tick controller
         tickController.addTickListener(this);
-        System.out.println("VehicleController registrado en TickController");
+        System.out.println("VehicleController registrado en TickController con sistema de intersecciones");
+    }
+    
+    // Constructor para retrocompatibilidad (sin TrafficController)
+    public VehicleController(Pane scene, ScenarioController scenarioController, TickController tickController) {
+        this(scene, scenarioController, tickController, null);
     }
     
     /**
@@ -98,14 +121,29 @@ public class VehicleController implements TickController.TickListener {
             VehicleTypeEnum type = Math.random() < EMERGENCY_PROBABILITY ? 
                 VehicleTypeEnum.EMERGENCY : VehicleTypeEnum.NORMAL;
             
-            // Seleccionar dirección aleatoria de las permitidas en la calle
-            List<DirectionEnum> possibleDirections = getAllDirections();
-            DirectionEnum direction = possibleDirections.get(
-                ThreadLocalRandom.current().nextInt(possibleDirections.size()));
+            // Detectar si es Escenario 2
+            String streetId = entryStreet.getId();
+            boolean isScenario2 = streetId.contains("_segment") && streetId.contains("_lane");
             
-            // Intentar crear el vehículo - si tiene éxito, terminar
-            if (trySpawnVehicle(entryStreet, type, direction)) {
-                return;
+            if (isScenario2) {
+                // ESCENARIO 2: Generar con destino específico
+                String specificDestination = generateRandomScenario2Destination(entryStreet);
+                DirectionEnum direction = getDirectionForDestination(specificDestination, entryStreet);
+                
+                if (spawnVehicle(entryStreet, type, direction, specificDestination)) {
+                    System.out.println("🚗 AUTO-SPAWN Escenario 2: Vehículo " + type + " creado hacia " + specificDestination);
+                    return;
+                }
+            } else {
+                // ESCENARIO 1: Lógica original
+                List<DirectionEnum> possibleDirections = getAllDirections();
+                DirectionEnum direction = possibleDirections.get(
+                    ThreadLocalRandom.current().nextInt(possibleDirections.size()));
+                
+                if (trySpawnVehicle(entryStreet, type, direction)) {
+                    System.out.println("🚗 AUTO-SPAWN Escenario 1: Vehículo " + type + " creado");
+                    return;
+                }
             }
         }
         
@@ -119,6 +157,80 @@ public class VehicleController implements TickController.TickListener {
     }
     
     /**
+     * Genera un destino específico aleatorio para el Escenario 2 basado en la calle de entrada
+     */
+    private String generateRandomScenario2Destination(Street entryStreet) {
+        String streetId = entryStreet.getId().toLowerCase();
+        
+        // Destinos disponibles según la entrada
+        List<String> availableDestinations = new ArrayList<>();
+        
+        if (streetId.contains("east")) {
+            // East puede ir a: Recto, S1-1, S1-2, N2-1, N2-2, U-Turn
+            availableDestinations.add("Recto");
+            availableDestinations.add("S1-1");
+            availableDestinations.add("S1-2");
+            availableDestinations.add("N2-1");
+            availableDestinations.add("N2-2");
+            availableDestinations.add("U-Turn");
+        } else if (streetId.contains("west")) {
+            // West puede ir a: Recto, S2-1, S2-2, N2-1, N2-2, U-Turn
+            availableDestinations.add("Recto");
+            availableDestinations.add("S2-1");
+            availableDestinations.add("S2-2");
+            availableDestinations.add("N2-1");
+            availableDestinations.add("N2-2");
+            availableDestinations.add("U-Turn");
+        } else {
+            // Fallback para otras entradas
+            availableDestinations.add("Recto");
+        }
+        
+        // Seleccionar destino aleatorio
+        int randomIndex = ThreadLocalRandom.current().nextInt(availableDestinations.size());
+        String selectedDestination = availableDestinations.get(randomIndex);
+        
+        System.out.println("🎯 Destino aleatorio generado: " + selectedDestination + " para calle " + streetId);
+        return selectedDestination;
+    }
+    
+    /**
+     * Determina la DirectionEnum apropiada basada en el destino y la calle de entrada
+     */
+    private DirectionEnum getDirectionForDestination(String destination, Street entryStreet) {
+        String streetId = entryStreet.getId().toLowerCase();
+        boolean isWest = streetId.contains("west");
+        
+        DirectionEnum result;
+        
+        switch (destination) {
+            case "Recto":
+                result = DirectionEnum.STRAIGHT;
+                break;
+            case "U-Turn":
+                result = DirectionEnum.U_TURN;
+                break;
+            default:
+                if (destination.contains("S1") || destination.contains("S2")) {
+                    // Destinos Sur
+                    result = isWest ? DirectionEnum.LEFT : DirectionEnum.RIGHT;
+                } else if (destination.contains("N1") || destination.contains("N2")) {
+                    // Destinos Norte
+                    result = isWest ? DirectionEnum.RIGHT : DirectionEnum.LEFT;
+                } else {
+                    result = DirectionEnum.STRAIGHT;
+                }
+        }
+        
+        System.out.println("🧭 MAPEO DIRECCIÓN AUTO-SPAWN:");
+        System.out.println("    🏁 Calle: " + streetId + " (West: " + isWest + ")");
+        System.out.println("    🎯 Destino: " + destination);
+        System.out.println("    ➡️  DirectionEnum: " + result);
+        
+        return result;
+    }
+    
+    /**
      * Intenta crear un vehículo, retorna true si tuvo éxito
      */
     private boolean trySpawnVehicle(Street entryStreet, VehicleTypeEnum type, DirectionEnum direction) {
@@ -129,12 +241,25 @@ public class VehicleController implements TickController.TickListener {
      * Intenta crear un vehículo con destino específico, retorna true si tuvo éxito
      */
     private boolean trySpawnVehicle(Street entryStreet, VehicleTypeEnum type, DirectionEnum direction, String specificDestination) {
+        System.out.println("🚀 === CREANDO VEHÍCULO ===");
+        System.out.println("    🏁 Calle de entrada: " + entryStreet.getId());
+        System.out.println("    🚗 Tipo: " + type);
+        System.out.println("    ➡️  Dirección: " + direction);
+        System.out.println("    🎯 Destino específico: " + specificDestination);
+        
         // Calcular posición inicial y ruta completa
         VehiclePath path = calculateVehiclePath(entryStreet, direction, specificDestination);
-        if (path == null) return false;
+        if (path == null) {
+            System.out.println("❌ Error: No se pudo calcular VehiclePath");
+            return false;
+        }
+        
+        System.out.println("    📍 Posición inicial: (" + path.getStartX() + ", " + path.getStartY() + ")");
+        System.out.println("    🛤️  Waypoints totales: " + path.getWaypoints().size());
         
         // Determinar dirección de spawn
         String spawnDirection = parseDirectionFromStreetId(entryStreet.getId());
+        System.out.println("    🧭 Dirección spawn: " + spawnDirection);
         
         // Verificar si es seguro crear el vehículo en esta posición
         if (!collisionManager.canSpawnVehicle(spawnDirection, path.getStartX(), path.getStartY())) {
@@ -317,8 +442,12 @@ public class VehicleController implements TickController.TickListener {
                 }
             }
             
-            // Verificar si puede avanzar usando el collision manager
-            if (collisionManager.canMove(vehicleId, nextX, nextY, speed)) {
+            // Verificar si puede avanzar usando el collision manager Y los semáforos
+            boolean canMoveCollision = collisionManager.canMove(vehicleId, nextX, nextY, speed);
+            // SOLO usar sistema de semáforos - NO sistema de colas
+            boolean canMoveTrafficLight = canMoveWithTrafficLight(vehicleId, vehicle, currentX, currentY, nextX, nextY);
+            
+            if (canMoveCollision && canMoveTrafficLight) {
                 // Mover vehículo a lo largo de su ruta
                 if (path.moveAlongPath(speed)) {
                     // Actualizar posición visual
@@ -335,7 +464,11 @@ public class VehicleController implements TickController.TickListener {
                 }
             } else {
                 // El vehículo debe esperar - no mover
-                System.out.println("Vehículo " + vehicleId + " esperando por colisión/intersección");
+                if (!canMoveTrafficLight) {
+                    System.out.println("Vehículo " + vehicleId + " DETENIDO por SEMÁFORO ROJO");
+                } else {
+                    System.out.println("Vehículo " + vehicleId + " esperando por colisión/intersección");
+                }
             }
         }
     }
@@ -357,6 +490,321 @@ public class VehicleController implements TickController.TickListener {
         vehiclePaths.remove(vehicleId);
         
         System.out.println("Vehículo removido: " + vehicleId);
+    }
+    
+    /**
+     * NUEVO: Sistema simple de control de intersecciones
+     * Solo un vehículo por intersección, orden de llegada
+     */
+    private boolean canMoveWithIntersectionControl(String vehicleId, double currentX, double currentY, double nextX, double nextY) {
+        // Verificar si el vehículo ya está dentro de una intersección
+        String currentIntersection = getCurrentIntersection(currentX, currentY);
+        if (currentIntersection != null) {
+            // Si ya está dentro, puede continuar hasta salir
+            System.out.println("✅ DENTRO: Vehículo " + vehicleId + " puede continuar en " + currentIntersection);
+            return true;
+        }
+        
+        // Verificar si se está acercando a una intersección
+        String upcomingIntersection = getUpcomingIntersection(vehicleId, currentX, currentY, nextX, nextY);
+        if (upcomingIntersection == null) {
+            return true; // No hay intersección adelante, puede moverse
+        }
+        
+        // Verificar si la intersección está ocupada
+        String occupyingVehicle = intersectionOccupancy.get(upcomingIntersection);
+        if (occupyingVehicle == null) {
+            // Intersección libre, puede entrar
+            intersectionOccupancy.put(upcomingIntersection, vehicleId);
+            System.out.println("🟢 ENTRADA: Vehículo " + vehicleId + " entra a " + upcomingIntersection);
+            return true;
+        }
+        
+        // Intersección ocupada, verificar si es el primero en la cola
+        Queue<String> queue = intersectionQueues.get(upcomingIntersection);
+        if (queue != null) {
+            if (!queue.contains(vehicleId)) {
+                // Agregar a la cola si no está ya
+                queue.offer(vehicleId);
+                System.out.println("🔄 COLA: Vehículo " + vehicleId + " agregado a cola de " + upcomingIntersection + " (posición " + queue.size() + ")");
+            }
+            
+            // Solo puede pasar si es el primero en la cola
+            String nextInQueue = queue.peek();
+            if (vehicleId.equals(nextInQueue)) {
+                System.out.println("⏳ ESPERANDO: Vehículo " + vehicleId + " es siguiente en cola de " + upcomingIntersection);
+                return false; // Debe esperar a que se libere
+            } else {
+                System.out.println("🚫 BLOQUEADO: Vehículo " + vehicleId + " espera en cola de " + upcomingIntersection);
+                return false;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Libera la intersección cuando un vehículo sale
+     */
+    private void releaseIntersection(String vehicleId) {
+        // Buscar en qué intersección estaba el vehículo
+        for (Map.Entry<String, String> entry : intersectionOccupancy.entrySet()) {
+            if (vehicleId.equals(entry.getValue())) {
+                String intersectionId = entry.getKey();
+                intersectionOccupancy.remove(intersectionId);
+                
+                // Permitir que el siguiente en la cola entre
+                Queue<String> queue = intersectionQueues.get(intersectionId);
+                if (queue != null && !queue.isEmpty()) {
+                    String nextVehicle = queue.poll();
+                    if (nextVehicle.equals(vehicleId)) {
+                        // El vehículo que sale era el primero en cola, tomar el siguiente
+                        if (!queue.isEmpty()) {
+                            nextVehicle = queue.peek();
+                        }
+                    }
+                    System.out.println("🔄 LIBERACIÓN: " + intersectionId + " liberada por " + vehicleId + 
+                                     (queue.isEmpty() ? "" : ", siguiente: " + queue.peek()));
+                } else {
+                    System.out.println("🔄 LIBERACIÓN: " + intersectionId + " liberada por " + vehicleId);
+                }
+                break;
+            }
+        }
+    }
+    
+    /**
+     * Determina si el vehículo está actualmente dentro de una intersección
+     */
+    private String getCurrentIntersection(double x, double y) {
+        List<Intersection> intersections = scenarioController.getAllIntersections();
+        
+        for (Intersection intersection : intersections) {
+            String intersectionId = intersection.getId();
+            if (!intersectionId.equals("intersection_2") && !intersectionId.equals("intersection_3")) {
+                continue;
+            }
+            
+            double leftBound = intersection.getPosX();
+            double rightBound = intersection.getPosX() + intersection.getWidth();
+            double topBound = intersection.getPosY();
+            double bottomBound = intersection.getPosY() + intersection.getHeight();
+            
+            if (x >= leftBound && x <= rightBound && y >= topBound && y <= bottomBound) {
+                return intersectionId;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Verifica si un vehículo salió de una intersección que estaba ocupando y la libera
+     */
+    private void checkAndReleaseIntersection(String vehicleId, double x, double y) {
+        // Verificar si el vehículo está ocupando alguna intersección
+        for (Map.Entry<String, String> entry : intersectionOccupancy.entrySet()) {
+            if (vehicleId.equals(entry.getValue())) {
+                String intersectionId = entry.getKey();
+                
+                // Verificar si ya no está dentro de la intersección
+                if (getCurrentIntersection(x, y) == null) {
+                    // El vehículo salió de la intersección, liberarla
+                    intersectionOccupancy.remove(intersectionId);
+                    
+                    // Permitir que el siguiente vehículo en cola entre
+                    Queue<String> queue = intersectionQueues.get(intersectionId);
+                    if (queue != null && !queue.isEmpty()) {
+                        // Remover el vehículo que acaba de salir de la cola si está ahí
+                        queue.remove(vehicleId);
+                        System.out.println("🔄 SALIDA: Vehículo " + vehicleId + " salió de " + intersectionId + 
+                                         (queue.isEmpty() ? "" : ", siguiente en cola puede proceder"));
+                    } else {
+                        System.out.println("🔄 SALIDA: Vehículo " + vehicleId + " salió de " + intersectionId);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+    
+    /**
+     * SIMPLIFICADO: Verifica si un vehículo puede avanzar basado SOLO en semáforos
+     */
+    private boolean canMoveWithTrafficLight(String vehicleId, Vehicle vehicle, double currentX, double currentY, double nextX, double nextY) {
+        if (trafficController == null) {
+            return true; // Si no hay controlador de semáforos, permitir movimiento
+        }
+        
+        // IMPORTANTE: Si el vehículo ya está dentro de una intersección, puede continuar
+        if (isVehicleInsideIntersection(currentX, currentY)) {
+            return true;
+        }
+        
+        // Determinar qué intersección está adelante del vehículo en su ruta
+        String upcomingIntersection = getUpcomingIntersection(vehicleId, currentX, currentY, nextX, nextY);
+        if (upcomingIntersection == null) {
+            return true; // Si no hay intersección adelante, permitir movimiento
+        }
+        
+        // Determinar la dirección del vehículo
+        VehiclePath path = vehiclePaths.get(vehicleId);
+        if (path == null) {
+            return true;
+        }
+        
+        // Obtener la dirección principal del movimiento
+        String vehicleDirection = getVehicleMainDirection(path);
+        
+        // Construir el ID del semáforo relevante
+        String trafficLightId = "traffic_light_" + upcomingIntersection + "_" + vehicleDirection;
+        
+        // Verificar el estado del semáforo
+        List<TrafficLight> trafficLights = scenarioController.getAllTrafficLights();
+        
+        for (TrafficLight light : trafficLights) {
+            if (light.getId().equals(trafficLightId)) {
+                boolean isGreen = light.isGreen();
+                
+                if (!isGreen) {
+                    System.out.println("🚫 ROJO: Vehículo " + vehicleId + " detenido por " + trafficLightId);
+                    return false; // DETENER el vehículo
+                } else {
+                    System.out.println("✅ VERDE: Vehículo " + vehicleId + " puede avanzar por " + trafficLightId);
+                    return true; // PUEDE AVANZAR
+                }
+            }
+        }
+        
+        return true; // Si no se encuentra el semáforo, permitir movimiento
+    }
+    
+    /**
+     * Determina qué intersección está cerca del vehículo
+     */
+    private String getNearbyIntersection(double x, double y) {
+        double proximityThreshold = 150; // Distancia para considerar "cerca"
+        
+        // Obtener intersecciones desde el scenario controller
+        List<Intersection> intersections = scenarioController.getAllIntersections();
+        
+        for (Intersection intersection : intersections) {
+            double intersectionX = intersection.getPosX() + intersection.getWidth() / 2.0;
+            double intersectionY = intersection.getPosY() + intersection.getHeight() / 2.0;
+            
+            double distance = Math.sqrt(Math.pow(x - intersectionX, 2) + Math.pow(y - intersectionY, 2));
+            
+            if (distance < proximityThreshold) {
+                return intersection.getId();
+            }
+        }
+        
+        return null; // No está cerca de ninguna intersección
+    }
+    
+    /**
+     * Determina la dirección principal del vehículo (ew para East→West, we para West→East)
+     */
+    private String getVehicleMainDirection(VehiclePath path) {
+        // Obtener waypoints para analizar la dirección general
+        if (path.getWaypoints().size() < 2) {
+            return "we"; // Por defecto
+        }
+        
+        // Analizar los primeros waypoints para determinar dirección principal
+        VehiclePath.PathPoint first = path.getWaypoints().get(0);
+        VehiclePath.PathPoint last = path.getWaypoints().get(path.getWaypoints().size() - 1);
+        
+        double totalDeltaX = last.x - first.x;
+        
+        if (totalDeltaX > 50) {
+            // Se mueve significativamente hacia la derecha = West→East
+            // CORREGIDO: Estos vehículos deben respetar semáforos "ew" 
+            System.out.println("🔄 Vehículo West→East usa semáforo (ew)");
+            return "ew";
+        } else if (totalDeltaX < -50) {
+            // Se mueve significativamente hacia la izquierda = East→West  
+            // CORREGIDO: Estos vehículos deben respetar semáforos "we"
+            System.out.println("🔄 Vehículo East→West usa semáforo (we)");
+            return "we";
+        } else {
+            // Movimiento principalmente vertical o ambiguo
+            System.out.println("🔄 Vehículo con movimiento ambiguo, usando ew por defecto");
+            return "ew";
+        }
+    }
+    
+    /**
+     * Verifica si el vehículo está actualmente dentro de una intersección
+     */
+    private boolean isVehicleInsideIntersection(double x, double y) {
+        List<Intersection> intersections = scenarioController.getAllIntersections();
+        
+        for (Intersection intersection : intersections) {
+            // Solo verificar intersection_2 e intersection_3 (las del escenario 2)
+            String intersectionId = intersection.getId();
+            if (!intersectionId.equals("intersection_2") && !intersectionId.equals("intersection_3")) {
+                continue;
+            }
+            
+            double leftBound = intersection.getPosX();
+            double rightBound = intersection.getPosX() + intersection.getWidth();
+            double topBound = intersection.getPosY();
+            double bottomBound = intersection.getPosY() + intersection.getHeight();
+            
+            // Verificar si el vehículo está dentro de los límites de la intersección
+            if (x >= leftBound && x <= rightBound && y >= topBound && y <= bottomBound) {
+                System.out.println("🏁 Vehículo DENTRO de " + intersectionId + " en (" + Math.round(x) + ", " + Math.round(y) + ")");
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * Determina qué intersección está adelante del vehículo en su ruta
+     */
+    private String getUpcomingIntersection(String vehicleId, double currentX, double currentY, double nextX, double nextY) {
+        // Obtener intersecciones del scenario
+        List<Intersection> intersections = scenarioController.getAllIntersections();
+        
+        // Para el escenario 2, las intersecciones principales son intersection_2 e intersection_3
+        // Usar rangos de coordenadas específicos para mejor detección
+        double detectionDistance = 150; // Aumentar distancia de detección
+        
+        for (Intersection intersection : intersections) {
+            // Solo verificar intersection_2 e intersection_3 (las del escenario 2)
+            String intersectionId = intersection.getId();
+            if (!intersectionId.equals("intersection_2") && !intersectionId.equals("intersection_3")) {
+                continue;
+            }
+            
+            double intersectionX = intersection.getPosX() + intersection.getWidth() / 2.0;
+            double intersectionY = intersection.getPosY() + intersection.getHeight() / 2.0;
+            
+            // Calcular distancia a la intersección
+            double distanceToIntersection = Math.sqrt(Math.pow(currentX - intersectionX, 2) + Math.pow(currentY - intersectionY, 2));
+            
+            // Para vehículos East→West: verificar si la intersección está adelante (X menor)
+            // Para vehículos West→East: verificar si la intersección está adelante (X mayor)
+            boolean isAhead = false;
+            
+            if (nextX > currentX) {
+                // Vehículo se mueve hacia la derecha (West→East)
+                isAhead = intersectionX > currentX;
+            } else if (nextX < currentX) {
+                // Vehículo se mueve hacia la izquierda (East→West)
+                isAhead = intersectionX < currentX;
+            }
+            
+            // Si la intersección está adelante y dentro del rango de detección
+            if (isAhead && distanceToIntersection <= detectionDistance && distanceToIntersection > 20) {
+                System.out.println("🚦 SEMÁFORO DETECTADO: Vehículo " + vehicleId + " detecta " + intersectionId + 
+                                 " a " + Math.round(distanceToIntersection) + "px adelante");
+                return intersectionId;
+            }
+        }
+        
+        return null;
     }
     
     /**

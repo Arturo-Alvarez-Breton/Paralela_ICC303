@@ -1,11 +1,14 @@
 package app.controller;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import app.model.Intersection;
 import app.model.TrafficLight;
 import app.ui.TrafficLightView;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Controller for managing traffic lights using tick-based timing
@@ -33,9 +36,9 @@ public class TrafficController implements TickController.TickListener {
     private TrafficPhase currentPhase;
     private TickController tickController;
 
-    // Timing configuration (in ticks)
-    private static final int DEFAULT_GREEN_TICKS = 100; // 5 seconds at 20 ticks/second
-    private static final int DEFAULT_RED_TICKS = 100;   // 5 seconds at 20 ticks/second
+    // Timing configuration (in ticks) - ESCENARIO 2: Rango 300-600 ticks
+    private static final int DEFAULT_GREEN_TICKS = 400; // 20 segundos at 20 ticks/second
+    private static final int DEFAULT_RED_TICKS = 400;   // 20 segundos at 20 ticks/second
     
     private int greenTicks = DEFAULT_GREEN_TICKS;
     private int redTicks = DEFAULT_RED_TICKS;
@@ -137,20 +140,36 @@ public class TrafficController implements TickController.TickListener {
      * Update traffic lights based on current phase
      */
     private void updateTrafficLightsByPhase() {
+        System.out.println("🚦 === ACTUALIZANDO SEMÁFOROS - FASE: " + currentPhase + " ===");
+        
         for (TrafficLight light : trafficLights) {
             String lightId = light.getId();
+            boolean wasGreen = light.isGreen();
             
             if (lightId.contains("_we")) {
                 // West->East traffic lights
-                light.setGreen(currentPhase == TrafficPhase.WEST_FLOW);
+                boolean shouldBeGreen = (currentPhase == TrafficPhase.WEST_FLOW);
+                light.setGreen(shouldBeGreen);
+                String status = shouldBeGreen ? "🟢 VERDE" : "🔴 ROJO";
+                String change = (wasGreen != shouldBeGreen) ? " [CAMBIÓ]" : "";
+                System.out.println("    " + lightId + " (West→East): " + status + change);
             } else if (lightId.contains("_ew")) {
                 // East->West traffic lights  
-                light.setGreen(currentPhase == TrafficPhase.EAST_FLOW);
+                boolean shouldBeGreen = (currentPhase == TrafficPhase.EAST_FLOW);
+                light.setGreen(shouldBeGreen);
+                String status = shouldBeGreen ? "🟢 VERDE" : "🔴 ROJO";
+                String change = (wasGreen != shouldBeGreen) ? " [CAMBIÓ]" : "";
+                System.out.println("    " + lightId + " (East→West): " + status + change);
             } else {
                 // Default behavior for lights without specific direction
-                light.setGreen(currentPhase == TrafficPhase.WEST_FLOW);
+                boolean shouldBeGreen = (currentPhase == TrafficPhase.WEST_FLOW);
+                light.setGreen(shouldBeGreen);
+                String status = shouldBeGreen ? "🟢 VERDE" : "🔴 ROJO";
+                String change = (wasGreen != shouldBeGreen) ? " [CAMBIÓ]" : "";
+                System.out.println("    " + lightId + " (Default): " + status + change);
             }
         }
+        System.out.println("🚦 === FIN ACTUALIZACIÓN SEMÁFOROS ===");
     }
 
     /**
