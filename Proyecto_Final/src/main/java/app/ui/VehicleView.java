@@ -2,13 +2,13 @@ package app.ui;
 
 import app.model.enums.DirectionEnum;
 import app.model.enums.VehicleTypeEnum;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
 import javafx.scene.Group;
 import javafx.scene.effect.Glow;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 
 //TODO:  REFACTOR
 public class VehicleView extends Group {
