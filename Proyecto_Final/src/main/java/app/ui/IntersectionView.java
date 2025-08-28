@@ -1004,9 +1004,23 @@ public class IntersectionView extends Pane {
         String label = null;
 
         if (id.contains("north_salida")) {
-            label = "N Exit";
+            // Determinar si es N1 o N2 basado en la intersección
+            if (id.contains("intersection_2")) {
+                label = id.contains("left") ? "N1" : "N2";
+            } else if (id.contains("intersection_3")) {
+                label = id.contains("left") ? "N1" : "N2";
+            } else {
+                label = "N Exit"; // Fallback para casos no esperados
+            }
         } else if (id.contains("south_salida")) {
-            label = "S Exit";
+            // Determinar si es S1 o S2 basado en la intersección
+            if (id.contains("intersection_2")) {
+                label = id.contains("left") ? "S1" : "S2";
+            } else if (id.contains("intersection_3")) {
+                label = id.contains("left") ? "S1" : "S2";
+            } else {
+                label = "S Exit"; // Fallback para casos no esperados
+            }
         } else {
             if (id.startsWith("west_left_lane")) label = "West (L)";
             else if (id.startsWith("west_center_lane")) label = "West (C)";
