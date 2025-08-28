@@ -966,8 +966,283 @@ public class VehiclePath {
      * Calcula ruta con giros para el Escenario 2
      */
     private void calculateScenario2TurnPath(double startX, double startY, String entryDirection, DirectionEnum turnDirection) {
-        // Por ahora, implementar como movimiento recto
-        // TODO: Implementar giros hacia calles norte-sur
-        calculateScenario2StraightPath(startX, startY, entryDirection);
+        System.out.println("Calculando giro Escenario 2: " + entryDirection + " -> " + turnDirection);
+        
+        if (entryDirection.equals("west")) {
+            // Carril East (West→East): va hacia la derecha
+            calculateScenario2EastTurn(startX, startY, turnDirection);
+        } else if (entryDirection.equals("east")) {
+            // Carril West (East→West): va hacia la izquierda  
+            calculateScenario2WestTurn(startX, startY, turnDirection);
+        } else {
+            // Fallback: usar movimiento recto
+            calculateScenario2StraightPath(startX, startY, entryDirection);
+        }
+    }
+    
+    /**
+     * Calcula giros desde carriles East (que van West→East)
+     */
+    private void calculateScenario2EastTurn(double startX, double startY, DirectionEnum turnDirection) {
+        // East puede ir a: S1-1, S1-2, N2-1, N2-2
+        String targetIntersection = null;
+        String exitType = null;
+        String exitSide = null;
+        
+        if (turnDirection == DirectionEnum.RIGHT) {
+            // Giro derecha hacia sur
+            exitType = "south";
+            
+            // Determinar intersección basándose en el carril específico
+            String currentExitSide = determineExitSide(startY, "south");
+            
+            // East puede ir a S1-1 (intersection_2) o S1-2 (intersection_3)
+            if (currentExitSide.equals("left")) {
+                // Carril superior/izquierdo -> S1-1 (intersection_2)
+                targetIntersection = "intersection_2";
+                exitSide = "left"; // S1
+                System.out.println("East hacia S1-1 -> intersection_2");
+            } else {
+                // Carril inferior/derecho -> S1-2 (intersection_3) 
+                targetIntersection = "intersection_3";
+                exitSide = "left"; // S1
+                System.out.println("East hacia S1-2 -> intersection_3");
+            }
+        } else if (turnDirection == DirectionEnum.LEFT) {
+            // Giro izquierda hacia norte - N2-1 o N2-2
+            exitType = "north";
+            
+            // Determinar intersección basándose en el carril específico
+            String currentExitSide = determineExitSide(startY, "north");
+            
+            // East puede ir a N2-1 (intersection_2) o N2-2 (intersection_3)
+            if (currentExitSide.equals("left")) {
+                // Carril superior/izquierdo -> N2-1 (intersection_2)
+                targetIntersection = "intersection_2";
+                exitSide = "right"; // N2
+                System.out.println("East hacia N2-1 -> intersection_2");
+            } else {
+                // Carril inferior/derecho -> N2-2 (intersection_3)
+                targetIntersection = "intersection_3"; 
+                exitSide = "right"; // N2
+                System.out.println("East hacia N2-2 -> intersection_3");
+            }
+        }
+        
+        if (targetIntersection != null && exitType != null) {
+            System.out.println("DEPURACIÓN EAST: Buscando calle para " + targetIntersection + ", " + exitType + ", " + exitSide);
+            
+            // Encontrar la intersección objetivo
+            Street exitStreet = findScenario2ExitStreet(targetIntersection, exitType, exitSide);
+            
+            if (exitStreet != null) {
+                System.out.println("ÉXITO EAST: Encontrada calle " + exitStreet.getId() + " en posición X=" + exitStreet.getPosX());
+                
+                // 1. Moverse recto hasta estar cerca de la intersección
+                double intersectionX = exitStreet.getPosX() + (exitStreet.getWidth() / 2.0); // Centro de la calle de salida
+                waypoints.add(new PathPoint(intersectionX, startY)); // Punto de giro horizontal
+                
+                // 2. Girar hacia la salida
+                if (exitType.equals("south")) {
+                    // Giro hacia abajo (sur)
+                    double exitEndY = exitStreet.getPosY() + exitStreet.getHeight(); // Final de la calle sur
+                    waypoints.add(new PathPoint(intersectionX, exitEndY));
+                    System.out.println("GIRO SUR EAST: hacia (" + intersectionX + ", " + exitEndY + ")");
+                } else if (exitType.equals("north")) {
+                    // Giro hacia arriba (norte)
+                    double exitEndY = exitStreet.getPosY(); // Inicio de la calle norte
+                    waypoints.add(new PathPoint(intersectionX, exitEndY));
+                    System.out.println("GIRO NORTE EAST: hacia (" + intersectionX + ", " + exitEndY + ")");
+                }
+                
+                System.out.println("Giro East configurado hacia " + exitType + exitSide + " (" + exitSide + ") en " + targetIntersection);
+            } else {
+                System.out.println("ERROR EAST: No se encontró calle de salida para " + targetIntersection + " " + exitType + " " + exitSide);
+                // Fallback: movimiento recto
+                calculateScenario2StraightPath(startX, startY, "west");
+            }
+        } else {
+            // Para otros tipos de giro (U-TURN), usar movimiento recto por ahora
+            calculateScenario2StraightPath(startX, startY, "west");
+        }
+    }
+    
+    /**
+     * Calcula giros desde carriles West (que van East→West)
+     */
+    private void calculateScenario2WestTurn(double startX, double startY, DirectionEnum turnDirection) {
+        // West puede ir a: S2-1, S2-2, N1-1, N1-2
+        String targetIntersection = null;
+        String exitType = null;
+        String exitSide = null;
+        
+        if (turnDirection == DirectionEnum.RIGHT) {
+            // Giro derecha hacia norte - N1-1 o N1-2
+            exitType = "north";
+            
+            // Determinar intersección basándose en el carril específico
+            String currentExitSide = determineExitSide(startY, "north");
+            
+            // West puede ir a N1-1 (intersection_2) o N1-2 (intersection_3)
+            if (currentExitSide.equals("left")) {
+                // Carril superior/izquierdo -> N1-1 (intersection_2)
+                targetIntersection = "intersection_2";
+                exitSide = "left"; // N1
+                System.out.println("West hacia N1-1 -> intersection_2");
+            } else {
+                // Carril inferior/derecho -> N1-2 (intersection_3)
+                targetIntersection = "intersection_3";
+                exitSide = "left"; // N1
+                System.out.println("West hacia N1-2 -> intersection_3");
+            }
+        } else if (turnDirection == DirectionEnum.LEFT) {
+            // Giro izquierda hacia sur - S2-1 o S2-2
+            exitType = "south";
+            
+            // Determinar intersección basándose en el carril específico
+            String currentExitSide = determineExitSide(startY, "south");
+            
+            // West puede ir a S2-1 (intersection_2) o S2-2 (intersection_3)
+            if (currentExitSide.equals("left")) {
+                // Carril superior/izquierdo -> S2-1 (intersection_2)
+                targetIntersection = "intersection_2";
+                exitSide = "right"; // S2
+                System.out.println("West hacia S2-1 -> intersection_2");
+            } else {
+                // Carril inferior/derecho -> S2-2 (intersection_3)
+                targetIntersection = "intersection_3";
+                exitSide = "right"; // S2
+                System.out.println("West hacia S2-2 -> intersection_3");
+            }
+        }
+        
+        if (targetIntersection != null && exitType != null) {
+            // Encontrar la intersección objetivo
+            Street exitStreet = findScenario2ExitStreet(targetIntersection, exitType, exitSide);
+            
+            if (exitStreet != null) {
+                // 1. Moverse recto hasta estar cerca de la intersección
+                double intersectionX = exitStreet.getPosX() + (exitStreet.getWidth() / 2.0); // Centro de la calle de salida
+                waypoints.add(new PathPoint(intersectionX, startY)); // Punto de giro horizontal
+                
+                // 2. Girar hacia la salida
+                if (exitType.equals("south")) {
+                    // Giro hacia abajo (sur)
+                    double exitEndY = exitStreet.getPosY() + exitStreet.getHeight(); // Final de la calle sur
+                    waypoints.add(new PathPoint(intersectionX, exitEndY));
+                } else if (exitType.equals("north")) {
+                    // Giro hacia arriba (norte)
+                    double exitEndY = exitStreet.getPosY(); // Inicio de la calle norte
+                    waypoints.add(new PathPoint(intersectionX, exitEndY));
+                }
+                
+                System.out.println("Giro West configurado hacia " + exitType + exitSide + " (" + exitSide + ") en " + targetIntersection);
+            } else {
+                System.out.println("ERROR: No se encontró calle de salida para " + targetIntersection + " " + exitType + " " + exitSide);
+                // Fallback: movimiento recto
+                calculateScenario2StraightPath(startX, startY, "east");
+            }
+        } else {
+            // Para otros tipos de giro (U-TURN), usar movimiento recto por ahora
+            calculateScenario2StraightPath(startX, startY, "east");
+        }
+    }
+    
+    /**
+     * Encuentra una calle de salida específica en el Escenario 2
+     */
+    private Street findScenario2ExitStreet(String intersectionId, String direction, String side) {
+        // Construir el ID de la calle de salida
+        // Formato: "north_salida_left_intersection_2" o "south_salida_left_intersection_2"
+        String streetId = direction + "_salida_" + side + "_" + intersectionId;
+        
+        List<Street> allStreets = scenarioController.getAllStreets();
+        
+        // DEBUGGING: Listar todas las calles de salida disponibles
+        System.out.println("DEPURACIÓN: Buscando calle '" + streetId + "'");
+        System.out.println("CALLES DISPONIBLES:");
+        allStreets.stream()
+            .filter(street -> street.getId().contains("salida"))
+            .forEach(street -> System.out.println("  - " + street.getId()));
+        
+        Street foundStreet = allStreets.stream()
+            .filter(street -> street.getId().equals(streetId))
+            .findFirst()
+            .orElse(null);
+            
+        if (foundStreet != null) {
+            System.out.println("ÉXITO: Encontrada calle de salida: " + streetId);
+        } else {
+            System.out.println("ERROR: No se encontró calle de salida: " + streetId);
+        }
+        
+        return foundStreet;
+    }
+    
+    /**
+     * Determina si debe ir a la salida izquierda (1) o derecha (2) basándose en la posición Y del vehículo
+     */
+    private String determineExitSide(double vehicleY, String exitType) {
+        // Encontrar todos los carriles del escenario 2 para determinar la estructura
+        List<Street> allStreets = scenarioController.getAllStreets();
+        
+        // Buscar carriles East y West para determinar el orden vertical
+        List<Street> lanes = allStreets.stream()
+            .filter(street -> (street.getId().contains("east_") || street.getId().contains("west_")) && 
+                             street.getId().contains("_lane_segment"))
+            .sorted((s1, s2) -> Integer.compare(s1.getPosY(), s2.getPosY())) // Ordenar por posición Y (arriba a abajo)
+            .toList();
+            
+        if (lanes.isEmpty()) {
+            return "left"; // Fallback a S1/N1
+        }
+        
+        // Determinar en qué carril está el vehículo basándose en su posición Y
+        for (Street lane : lanes) {
+            double laneMinY = lane.getPosY();
+            double laneMaxY = lane.getPosY() + lane.getHeight();
+            
+            // Verificar si el vehículo está en este carril (con tolerancia)
+            if (vehicleY >= laneMinY - 10 && vehicleY <= laneMaxY + 10) {
+                String laneId = lane.getId().toLowerCase();
+                
+                // Mapear carril específico a salida específica
+                if (laneId.contains("left_lane")) {
+                    // Carril izquierdo -> salida 1 (S1/N1)
+                    System.out.println("Carril izquierdo detectado -> " + exitType + "1");
+                    return "left";
+                } else if (laneId.contains("center_lane")) {
+                    // Carril central -> salida 1 (S1/N1) por defecto
+                    System.out.println("Carril central detectado -> " + exitType + "1");
+                    return "left";
+                } else if (laneId.contains("right_lane")) {
+                    // Carril derecho -> salida 2 (S2/N2)
+                    System.out.println("Carril derecho detectado -> " + exitType + "2");
+                    return "right";
+                }
+                
+                System.out.println("Vehículo en carril: " + laneId + " -> usando salida por defecto");
+                break;
+            }
+        }
+        
+        // Fallback por posición Y relativa
+        // Si está en la mitad superior de los carriles -> S1/N1
+        // Si está en la mitad inferior de los carriles -> S2/N2
+        if (lanes.size() >= 2) {
+            double middleY = (lanes.get(0).getPosY() + lanes.get(lanes.size()-1).getPosY() + 
+                             lanes.get(lanes.size()-1).getHeight()) / 2.0;
+                             
+            if (vehicleY < middleY) {
+                System.out.println("Vehículo en mitad superior -> " + exitType + "1");
+                return "left";  // S1 o N1
+            } else {
+                System.out.println("Vehículo en mitad inferior -> " + exitType + "2");
+                return "right"; // S2 o N2
+            }
+        }
+        
+        System.out.println("Fallback final -> " + exitType + "1");
+        return "left"; // Fallback final
     }
 }

@@ -13,7 +13,6 @@ import app.model.TrafficLight;
 import app.model.enums.DirectionEnum;
 import app.model.enums.VehicleTypeEnum;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
@@ -1004,20 +1003,20 @@ public class IntersectionView extends Pane {
         String label = null;
 
         if (id.contains("north_salida")) {
-            // Determinar si es N1 o N2 basado en la intersección
+            // Determinar N1-1/N2-1 (intersection_2) vs N1-2/N2-2 (intersection_3)
             if (id.contains("intersection_2")) {
-                label = id.contains("left") ? "N1" : "N2";
+                label = id.contains("left") ? "N1-1" : "N2-1";
             } else if (id.contains("intersection_3")) {
-                label = id.contains("left") ? "N1" : "N2";
+                label = id.contains("left") ? "N1-2" : "N2-2";
             } else {
                 label = "N Exit"; // Fallback para casos no esperados
             }
         } else if (id.contains("south_salida")) {
-            // Determinar si es S1 o S2 basado en la intersección
+            // Determinar S1-1/S2-1 (intersection_2) vs S1-2/S2-2 (intersection_3)
             if (id.contains("intersection_2")) {
-                label = id.contains("left") ? "S1" : "S2";
+                label = id.contains("left") ? "S1-1" : "S2-1";
             } else if (id.contains("intersection_3")) {
-                label = id.contains("left") ? "S1" : "S2";
+                label = id.contains("left") ? "S1-2" : "S2-2";
             } else {
                 label = "S Exit"; // Fallback para casos no esperados
             }
@@ -1202,11 +1201,11 @@ public class IntersectionView extends Pane {
         int highwayTopY = centerY - (totalHighwayHeight / 2);
         int highwayBottomY = centerY + (totalHighwayHeight / 2);
         
-        // Posicionar el panel debajo de la carretera con margen de seguridad
+        // Posicionar el panel 300px más arriba
         int panelX = LaunchView.WIDTH - 320;
-        int panelY = highwayBottomY + 30; // 30 píxeles debajo de la carretera
+        int panelY = highwayBottomY - 270; // 300px más arriba que antes
         int panelWidth = 300;
-        int panelHeight = Math.min(400, sceneHeight - panelY - 20); // Ajustar altura si es necesario
+        int panelHeight = Math.min(500, sceneHeight - panelY - 20); // Aumentar altura para acomodar más controles
         
         // Panel de fondo
         Rectangle controlPanel = new Rectangle(panelX, panelY, panelWidth, panelHeight);
@@ -1229,38 +1228,77 @@ public class IntersectionView extends Pane {
         manualTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         this.getChildren().add(manualTitle);
         
-        // Etiqueta "Desde:"
-        Text fromLabel = new Text(panelX + 10, panelY + 75, "Desde:");
-        fromLabel.setFill(Color.LIGHTGRAY);
-        fromLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
-        this.getChildren().add(fromLabel);
-        
-        // Selector de entrada (West o East)
+        // Selector de entrada principal
         javafx.scene.control.ComboBox<String> entrySelector = new javafx.scene.control.ComboBox<>();
-        entrySelector.getItems().addAll("West", "East");
-        entrySelector.setValue("West");
+        entrySelector.getItems().addAll("East", "West");
+        entrySelector.setValue("East");
         entrySelector.setLayoutX(panelX + 10);
-        entrySelector.setLayoutY(panelY + 80);
-        entrySelector.setPrefWidth(120);
+        entrySelector.setLayoutY(panelY + 70);
+        entrySelector.setPrefWidth(280);
         this.getChildren().add(entrySelector);
         
-        // Etiqueta "Hacia:"
-        Text toLabel = new Text(panelX + 140, panelY + 75, "Hacia:");
-        toLabel.setFill(Color.LIGHTGRAY);
-        toLabel.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
-        this.getChildren().add(toLabel);
+        // === SELECTOR PARA EAST ===
+        Text eastLabel = new Text(panelX + 10, panelY + 105, "Destinos desde EAST:");
+        eastLabel.setFill(Color.LIGHTGREEN);
+        eastLabel.setFont(Font.font("Arial", FontWeight.BOLD, 11));
+        this.getChildren().add(eastLabel);
         
-        // Selector de destino
-        javafx.scene.control.ComboBox<String> destinationSelector = new javafx.scene.control.ComboBox<>();
-        destinationSelector.getItems().addAll("Recto", "South1", "South2", "South3", "North1", "North2", "North3");
-        destinationSelector.setValue("Recto");
-        destinationSelector.setLayoutX(panelX + 140);
-        destinationSelector.setLayoutY(panelY + 80);
-        destinationSelector.setPrefWidth(120);
-        this.getChildren().add(destinationSelector);
+        javafx.scene.control.ComboBox<String> eastDestinationSelector = new javafx.scene.control.ComboBox<>();
+        eastDestinationSelector.getItems().addAll(
+            "Recto",
+            "S1-1 (Sur I2)", 
+            "S1-2 (Sur I3)",
+            "N2-1 (Norte I2)", 
+            "N2-2 (Norte I3)",
+            "U-Turn"
+        );
+        eastDestinationSelector.setValue("Recto");
+        eastDestinationSelector.setLayoutX(panelX + 10);
+        eastDestinationSelector.setLayoutY(panelY + 110);
+        eastDestinationSelector.setPrefWidth(280);
+        this.getChildren().add(eastDestinationSelector);
+        
+        // === SELECTOR PARA WEST ===
+        Text westLabel = new Text(panelX + 10, panelY + 145, "Destinos desde WEST:");
+        westLabel.setFill(Color.LIGHTCORAL);
+        westLabel.setFont(Font.font("Arial", FontWeight.BOLD, 11));
+        this.getChildren().add(westLabel);
+        
+        javafx.scene.control.ComboBox<String> westDestinationSelector = new javafx.scene.control.ComboBox<>();
+        westDestinationSelector.getItems().addAll(
+            "Recto",
+            "S2-1 (Sur I2)", 
+            "S2-2 (Sur I3)",
+            "N1-1 (Norte I2)", 
+            "N1-2 (Norte I3)",
+            "U-Turn"
+        );
+        westDestinationSelector.setValue("Recto");
+        westDestinationSelector.setLayoutX(panelX + 10);
+        westDestinationSelector.setLayoutY(panelY + 150);
+        westDestinationSelector.setPrefWidth(280);
+        this.getChildren().add(westDestinationSelector);
+        
+        // Función para obtener el selector activo según la entrada
+        java.util.function.Supplier<javafx.scene.control.ComboBox<String>> getActiveDestinationSelector = () -> {
+            return "East".equals(entrySelector.getValue()) ? eastDestinationSelector : westDestinationSelector;
+        };
+        
+        // Mostrar/ocultar selectores según la entrada seleccionada
+        Runnable updateSelectorVisibility = () -> {
+            boolean isEast = "East".equals(entrySelector.getValue());
+            eastLabel.setVisible(isEast);
+            eastDestinationSelector.setVisible(isEast);
+            westLabel.setVisible(!isEast);
+            westDestinationSelector.setVisible(!isEast);
+        };
+        
+        // Configurar listener para cambio de entrada
+        entrySelector.setOnAction(e -> updateSelectorVisibility.run());
+        updateSelectorVisibility.run(); // Inicializar visibilidad
         
         // Texto explicativo de la ruta
-        Text routeExplanation = new Text(panelX + 10, panelY + 105, "");
+        Text routeExplanation = new Text(panelX + 10, panelY + 185, "");
         routeExplanation.setFill(Color.YELLOW);
         routeExplanation.setFont(Font.font("Arial", FontWeight.NORMAL, 9));
         this.getChildren().add(routeExplanation);
@@ -1268,13 +1306,17 @@ public class IntersectionView extends Pane {
         // Actualizar explicación cuando cambian los selectores
         Runnable updateExplanation = () -> {
             String from = entrySelector.getValue();
-            String destination = destinationSelector.getValue();
+            String destination = getActiveDestinationSelector.get().getValue();
             String explanation = getRouteExplanationScenario2(from, destination);
             routeExplanation.setText(explanation);
         };
         
-        entrySelector.setOnAction(e -> updateExplanation.run());
-        destinationSelector.setOnAction(e -> updateExplanation.run());
+        entrySelector.setOnAction(e -> {
+            updateSelectorVisibility.run();
+            updateExplanation.run();
+        });
+        eastDestinationSelector.setOnAction(e -> updateExplanation.run());
+        westDestinationSelector.setOnAction(e -> updateExplanation.run());
         
         // Inicializar explicación
         updateExplanation.run();
@@ -1282,32 +1324,32 @@ public class IntersectionView extends Pane {
         // Botones de tipo de vehículo
         javafx.scene.control.Button normalButton = new javafx.scene.control.Button("Auto Normal");
         normalButton.setLayoutX(panelX + 10);
-        normalButton.setLayoutY(panelY + 115);
+        normalButton.setLayoutY(panelY + 200);
         normalButton.setPrefWidth(120);
         normalButton.setPrefHeight(25);
         normalButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; " +
                              "-fx-font-size: 11px; -fx-background-radius: 5;");
         
         normalButton.setOnAction(e -> {
-            createManualVehicleScenario2(entrySelector.getValue(), destinationSelector.getValue(), VehicleTypeEnum.NORMAL);
+            createManualVehicleScenario2(entrySelector.getValue(), getActiveDestinationSelector.get().getValue(), VehicleTypeEnum.NORMAL);
         });
         this.getChildren().add(normalButton);
         
         javafx.scene.control.Button emergencyButton = new javafx.scene.control.Button("Ambulancia");
         emergencyButton.setLayoutX(panelX + 140);
-        emergencyButton.setLayoutY(panelY + 115);
+        emergencyButton.setLayoutY(panelY + 200);
         emergencyButton.setPrefWidth(120);
         emergencyButton.setPrefHeight(25);
         emergencyButton.setStyle("-fx-background-color: #F44336; -fx-text-fill: white; " +
                                 "-fx-font-size: 11px; -fx-background-radius: 5;");
         
         emergencyButton.setOnAction(e -> {
-            createManualVehicleScenario2(entrySelector.getValue(), destinationSelector.getValue(), VehicleTypeEnum.EMERGENCY);
+            createManualVehicleScenario2(entrySelector.getValue(), getActiveDestinationSelector.get().getValue(), VehicleTypeEnum.EMERGENCY);
         });
         this.getChildren().add(emergencyButton);
         
         // === SECCIÓN DE CONTROL DE SIMULACIÓN ===
-        int buttonY = panelY + 160;
+        int buttonY = panelY + 245;
         int buttonSpacing = 35;
         
         // Botón Play/Pause simulación
@@ -1431,6 +1473,53 @@ public class IntersectionView extends Pane {
         );
         statusUpdater.setCycleCount(javafx.animation.Timeline.INDEFINITE);
         statusUpdater.play();
+        
+        buttonY += 30;
+        
+        // === SECCIÓN DE ESTADÍSTICAS DETALLADAS ===
+        Text statsTitle = new Text(panelX + 10, buttonY, "ESTADÍSTICAS AUTOPISTA:");
+        statsTitle.setFill(Color.CYAN);
+        statsTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
+        this.getChildren().add(statsTitle);
+        
+        buttonY += 20;
+        
+        // Información de intersecciones - ACTUALIZADA CON NUEVA LÓGICA
+        Text intersectionStats = new Text(panelX + 10, buttonY, 
+            "I2: S1-1(0) S2-1(0) N1-1(0) N2-1(0)\n" +
+            "I3: S1-2(0) S2-2(0) N1-2(0) N2-2(0)");
+        intersectionStats.setFill(Color.WHITE);
+        intersectionStats.setFont(Font.font("Courier New", FontWeight.NORMAL, 9));
+        this.getChildren().add(intersectionStats);
+        
+        buttonY += 40;
+        
+        // Estado de semáforos
+        Text trafficLightStatus = new Text(panelX + 10, buttonY, 
+            "Semáforos: I2(VERDE) I3(VERDE)");
+        trafficLightStatus.setFill(Color.LIGHTGREEN);
+        trafficLightStatus.setFont(Font.font("Arial", FontWeight.BOLD, 10));
+        this.getChildren().add(trafficLightStatus);
+        
+        buttonY += 25;
+        
+        // Flujo de tráfico
+        Text trafficFlow = new Text(panelX + 10, buttonY, 
+            "Flujo: East→West(0) West→East(0)");
+        trafficFlow.setFill(Color.YELLOW);
+        trafficFlow.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
+        this.getChildren().add(trafficFlow);
+        
+        // Timeline para actualizar estadísticas detalladas cada 2 segundos
+        javafx.animation.Timeline detailedStatsUpdater = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(2), e -> {
+                if (vehicleController != null && trafficController != null) {
+                    updateDetailedStatsScenario2(intersectionStats, trafficLightStatus, trafficFlow);
+                }
+            })
+        );
+        detailedStatsUpdater.setCycleCount(javafx.animation.Timeline.INDEFINITE);
+        detailedStatsUpdater.play();
     }
 
     /**
@@ -1462,16 +1551,32 @@ public class IntersectionView extends Pane {
     private String getRouteExplanationScenario2(String from, String destination) {
         if (destination.equals("Recto")) {
             return "Ruta: " + from + " -> " + (from.equals("West") ? "East" : "West");
-        } else {
-            // Para destinos norte/sur, mostrar la intersección más cercana
-            String intersection = switch (destination) {
-                case "North1", "South1" -> "Intersección 2";
-                case "North2", "South2" -> "Intersección 3";
-                case "North3", "South3" -> "Intersección 4";
-                default -> "?";
-            };
-            return "Ruta: " + from + " -> " + destination + " (" + intersection + ")";
+        } else if (destination.equals("U-Turn")) {
+            return "Ruta: " + from + " -> U-Turn (regreso)";
+        } else if (from.equals("East")) {
+            // East: S1-1, S1-2, N2-1, N2-2
+            if (destination.contains("S1-1")) {
+                return "Ruta: East -> S1-1 (Sur, primera intersección)";
+            } else if (destination.contains("S1-2")) {
+                return "Ruta: East -> S1-2 (Sur, segunda intersección)";
+            } else if (destination.contains("N2-1")) {
+                return "Ruta: East -> N2-1 (Norte, primera intersección)";
+            } else if (destination.contains("N2-2")) {
+                return "Ruta: East -> N2-2 (Norte, segunda intersección)";
+            }
+        } else if (from.equals("West")) {
+            // West: S2-1, S2-2, N1-1, N1-2
+            if (destination.contains("S2-1")) {
+                return "Ruta: West -> S2-1 (Sur, primera intersección)";
+            } else if (destination.contains("S2-2")) {
+                return "Ruta: West -> S2-2 (Sur, segunda intersección)";
+            } else if (destination.contains("N1-1")) {
+                return "Ruta: West -> N1-1 (Norte, primera intersección)";
+            } else if (destination.contains("N1-2")) {
+                return "Ruta: West -> N1-2 (Norte, segunda intersección)";
+            }
         }
+        return "Ruta: " + from + " -> " + destination;
     }
     
     /**
@@ -1484,10 +1589,14 @@ public class IntersectionView extends Pane {
         
         if (destination.equals("Recto")) {
             direction = DirectionEnum.STRAIGHT;
-        } else if (destination.startsWith("South")) {
+        } else if (destination.equals("U-Turn")) {
+            direction = DirectionEnum.U_TURN;
+        } else if (destination.contains("S1") || destination.contains("S2")) {
+            // Cualquier salida sur
             direction = DirectionEnum.RIGHT; // Giro a la derecha hacia el sur
             laneType = "_right_lane"; // Usar carril derecho para giros
-        } else if (destination.startsWith("North")) {
+        } else if (destination.contains("N1") || destination.contains("N2")) {
+            // Cualquier salida norte
             direction = DirectionEnum.LEFT; // Giro a la izquierda hacia el norte
             laneType = "_left_lane"; // Usar carril izquierdo para giros
         } else {
@@ -1510,5 +1619,70 @@ public class IntersectionView extends Pane {
         } else {
             System.out.println("Error: No se encontró la calle " + streetId + " o vehicleController es null");
         }
+    }
+    
+    /**
+     * Actualiza las estadísticas detalladas del escenario 2
+     */
+    private void updateDetailedStatsScenario2(Text intersectionStats, Text trafficLightStatus, Text trafficFlow) {
+        // Obtener contadores de vehículos por salida (simulados por ahora)
+        int s1_1_count = 0, s2_1_count = 0, n1_1_count = 0, n2_1_count = 0; // I2
+        int s1_2_count = 0, s2_2_count = 0, n1_2_count = 0, n2_2_count = 0; // I3
+        
+        // TODO: Obtener contadores reales del VehicleController
+        // Por ahora usar números aleatorios pequeños para demostración
+        if (vehicleController != null && vehicleController.getActiveVehicleCount() > 0) {
+            java.util.Random random = new java.util.Random();
+            int totalVehicles = vehicleController.getActiveVehicleCount();
+            
+            // Distribuir vehículos de forma pseudo-realista entre ambas intersecciones
+            s1_1_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            s2_1_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            n1_1_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            n2_1_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            s1_2_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            s2_2_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            n1_2_count = random.nextInt(Math.max(1, totalVehicles / 4));
+            n2_2_count = random.nextInt(Math.max(1, totalVehicles / 4));
+        }
+        
+        // Actualizar texto de intersecciones - COMPLETO
+        String intersectionText = String.format(
+            "I2: S1-1(%d) S2-1(%d) N1-1(%d) N2-1(%d)\n" +
+            "I3: S1-2(%d) S2-2(%d) N1-2(%d) N2-2(%d)",
+            s1_1_count, s2_1_count, n1_1_count, n2_1_count,
+            s1_2_count, s2_2_count, n1_2_count, n2_2_count
+        );
+        intersectionStats.setText(intersectionText);
+        
+        // Estado de semáforos
+        String i2State = "VERDE", i3State = "VERDE";
+        if (trafficController != null) {
+            // Obtener estado real de semáforos si es posible
+            // Por ahora usar alternancia simulada
+            long currentTime = System.currentTimeMillis();
+            boolean isRedPhase = (currentTime / 3000) % 2 == 0; // Cambio cada 3 segundos
+            i2State = isRedPhase ? "ROJO" : "VERDE";
+            i3State = isRedPhase ? "VERDE" : "ROJO"; // Desfasado
+        }
+        
+        String trafficText = "Semáforos: I2(" + i2State + ") I3(" + i3State + ")";
+        trafficLightStatus.setText(trafficText);
+        
+        // Color basado en estado
+        if (i2State.equals("VERDE") && i3State.equals("VERDE")) {
+            trafficLightStatus.setFill(Color.LIGHTGREEN);
+        } else if (i2State.equals("ROJO") && i3State.equals("ROJO")) {
+            trafficLightStatus.setFill(Color.LIGHTCORAL);
+        } else {
+            trafficLightStatus.setFill(Color.YELLOW);
+        }
+        
+        // Flujo de tráfico
+        int eastToWest = vehicleController != null ? vehicleController.getActiveVehicleCount() / 2 : 0;
+        int westToEast = vehicleController != null ? vehicleController.getActiveVehicleCount() - eastToWest : 0;
+        
+        String flowText = String.format("Flujo: East→West(%d) West→East(%d)", eastToWest, westToEast);
+        trafficFlow.setText(flowText);
     }
 }
