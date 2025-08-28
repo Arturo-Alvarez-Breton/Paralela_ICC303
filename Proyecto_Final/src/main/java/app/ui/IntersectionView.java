@@ -51,13 +51,13 @@ public class IntersectionView extends Pane {
         initializeScenario();
         drawScenario();
 
-        // Initialize traffic control for Scenario 2
+        // Initialize vehicle control for both scenarios
+        initializeVehicleControl();
+        
+        // Initialize traffic control for Scenario 2 (after tick controller is created)
         if (scenarioNumber == 2) {
             initializeTrafficControl();
         }
-        
-        // Initialize vehicle control for both scenarios
-        initializeVehicleControl();
     }
 
     /**
@@ -773,6 +773,9 @@ public class IntersectionView extends Pane {
         if (!trafficLights.isEmpty()) {
             this.trafficController = new TrafficController(intersections, trafficLights);
 
+            // Integrate traffic controller with tick system
+            trafficController.setTickController(tickController);
+
             // Position traffic lights properly
             positionTrafficLights();
 
@@ -782,7 +785,13 @@ public class IntersectionView extends Pane {
             // Start the traffic control system
             trafficController.startControl();
 
-            System.out.println("Traffic control initialized with " + trafficLights.size() + " traffic lights");
+            // Auto-start the tick controller for scenario 2 (highway scenario)
+            if (!tickController.isRunning() && !tickController.isPaused()) {
+                tickController.start();
+                System.out.println("Auto-started TickController for traffic light synchronization");
+            }
+
+            System.out.println("Traffic control initialized with " + trafficLights.size() + " traffic lights using tick system");
         }
     }
 
@@ -1089,11 +1098,11 @@ public class IntersectionView extends Pane {
      * Adds traffic light control panel with pause/resume functionality only
      */
     private void addTrafficControlPanel() {
-        int panelX = LaunchView.WIDTH - 250; // Ajustado para panel más pequeño
+        int panelX = LaunchView.WIDTH - 250; // Ajustado para panel más grande
         int panelY = 50; // Posición alta
 
-        // Control panel background - smaller size for just pause button
-        Rectangle controlPanel = new Rectangle(panelX, panelY, 220, 80);
+        // Control panel background - expanded size for pause button and timing slider
+        Rectangle controlPanel = new Rectangle(panelX, panelY, 220, 140);
         controlPanel.setArcWidth(8);
         controlPanel.setArcHeight(8);
         controlPanel.setFill(Color.color(0, 0, 0, 0.4));
@@ -1107,12 +1116,12 @@ public class IntersectionView extends Pane {
         controlTitle.setFont(Font.font("Arial", FontWeight.BOLD, 12));
         this.getChildren().add(controlTitle);
 
-        // Pause/Resume button - centered in panel
+        // Pause/Resume button
         javafx.scene.control.Button toggleButton = new javafx.scene.control.Button("Pausar");
         toggleButton.setLayoutX(panelX + 50);
         toggleButton.setLayoutY(panelY + 30);
         toggleButton.setPrefWidth(120);
-        toggleButton.setPrefHeight(35);
+        toggleButton.setPrefHeight(30);
         toggleButton.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; " +
                              "-fx-font-size: 12px; -fx-padding: 5 15 5 15; " +
                              "-fx-background-radius: 5;");
@@ -1134,6 +1143,32 @@ public class IntersectionView extends Pane {
             }
         });
         this.getChildren().add(toggleButton);
+
+        // Timing control title
+        Text timingTitle = new Text(panelX + 10, panelY + 85, "Cambio cada X ticks:");
+        timingTitle.setFill(Color.LIGHTBLUE);
+        timingTitle.setFont(Font.font("Arial", FontWeight.NORMAL, 10));
+        this.getChildren().add(timingTitle);
+
+        // Traffic light timing slider
+        Slider timingSlider = new Slider(20, 300, 100); // Min: 20 ticks (1 sec), Max: 300 ticks (15 sec), Default: 100 ticks (5 sec)
+        timingSlider.setLayoutX(panelX + 10);
+        timingSlider.setLayoutY(panelY + 95);
+        timingSlider.setPrefWidth(200);
+        timingSlider.setPrefHeight(30);
+        timingSlider.setShowTickLabels(true);
+        timingSlider.setShowTickMarks(true);
+        timingSlider.setMajorTickUnit(60); // Every 3 seconds at 20 ticks/sec
+        timingSlider.setMinorTickCount(2);
+
+        timingSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (trafficController != null) {
+                int ticks = newVal.intValue();
+                trafficController.setPhaseDuration(ticks);
+                timingTitle.setText("Cambio cada " + ticks + " ticks:");
+            }
+        });
+        this.getChildren().add(timingSlider);
     }
 
     /**

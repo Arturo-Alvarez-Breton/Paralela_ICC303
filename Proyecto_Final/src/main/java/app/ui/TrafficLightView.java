@@ -1,7 +1,6 @@
 package app.ui;
 
 import app.model.TrafficLight;
-import app.model.enums.LightColor;
 import javafx.animation.FadeTransition;
 import javafx.scene.Group;
 import javafx.scene.effect.DropShadow;
@@ -12,14 +11,13 @@ import javafx.util.Duration;
 
 /**
  * Visual representation of a traffic light in JavaFX
- * Displays a vertical rectangle with three circles (red, yellow, green)
+ * Displays a vertical rectangle with two circles (red and green only)
  */
 public class TrafficLightView extends Group {
 
     private final TrafficLight trafficLight;
     private final Rectangle background;
     private final Circle redLight;
-    private final Circle yellowLight;
     private final Circle greenLight;
 
     // Configurable dimensions
@@ -33,12 +31,11 @@ public class TrafficLightView extends Group {
     // Colors
     private static final Color BACKGROUND_COLOR = Color.DARKGRAY;
     private static final Color ACTIVE_RED = Color.RED;
-    private static final Color ACTIVE_YELLOW = Color.YELLOW;
     private static final Color ACTIVE_GREEN = Color.LIME;
     private static final Color INACTIVE_COLOR = Color.color(0.2, 0.2, 0.2); // Dark gray
 
     public TrafficLightView(TrafficLight trafficLight) {
-        this(trafficLight, 20, 60, 8); // Default dimensions
+        this(trafficLight, 20, 40, 8); // Reduced height since no yellow light
     }
 
     public TrafficLightView(TrafficLight trafficLight, double width, double height, double lightRadius) {
@@ -55,11 +52,10 @@ public class TrafficLightView extends Group {
         // Create visual components
         this.background = createBackground();
         this.redLight = createLight(0); // Top
-        this.yellowLight = createLight(1); // Middle
-        this.greenLight = createLight(2); // Bottom
+        this.greenLight = createLight(1); // Bottom
 
         // Add all components to group
-        this.getChildren().addAll(background, redLight, yellowLight, greenLight);
+        this.getChildren().addAll(background, redLight, greenLight);
 
         // Set initial position
         this.setLayoutX(trafficLight.getPosX());
@@ -81,7 +77,7 @@ public class TrafficLightView extends Group {
 
     private Circle createLight(int position) {
         double centerX = width / 2;
-        double spacing = height / 4;
+        double spacing = height / 3;
         double startY = spacing;
         double y = startY + (position * spacing);
 
@@ -94,27 +90,18 @@ public class TrafficLightView extends Group {
     }
 
     /**
-     * Updates the visual state based on the traffic light's current color
+     * Updates the visual state based on the traffic light's current state
      */
     public void updateLightState() {
-        LightColor currentColor = trafficLight.getCurrentColor();
-
         // Reset all lights to inactive
         setLightInactive(redLight);
-        setLightInactive(yellowLight);
         setLightInactive(greenLight);
 
         // Activate the current light with glow effect
-        switch (currentColor) {
-            case RED:
-                setLightActive(redLight, ACTIVE_RED, Color.DARKRED);
-                break;
-            case YELLOW:
-                setLightActive(yellowLight, ACTIVE_YELLOW, Color.ORANGE);
-                break;
-            case GREEN:
-                setLightActive(greenLight, ACTIVE_GREEN, Color.DARKGREEN);
-                break;
+        if (trafficLight.isGreen()) {
+            setLightActive(greenLight, ACTIVE_GREEN, Color.DARKGREEN);
+        } else {
+            setLightActive(redLight, ACTIVE_RED, Color.DARKRED);
         }
     }
 
